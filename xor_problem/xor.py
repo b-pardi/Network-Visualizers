@@ -3,6 +3,8 @@ from tqdm import tqdm
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
+from src.helpers import *
+from src.plotting import *
 
 class SmallNet:
     """Small feed forward network designed to solve the classic XOR problem.
@@ -23,6 +25,9 @@ class SmallNet:
 
         self.stop_flag = False
         self.num_epochs_per_refresh = num_epochs_per_refresh
+        self.h = h
+        self.input_size = 2
+        self.output_size = 1
 
     def sigmoid(self, x):
         # activation function
@@ -104,81 +109,103 @@ class SmallNet:
             self.backward(X, y, lr)
             loss = mse(y, self.yhat)
             self.losses.append(loss)
+
             if epoch % self.num_epochs_per_refresh == 0:
-                self.update_visualization(X, epoch)
+                self.update_network_plot(X, epoch)
                 self.update_error_plot(epoch)
+                self.plot_decision_boundaries(X, y)
             progress_bar.set_postfix(epoch=epoch, loss=loss)
 
+    def predict(self, X):
+        probs = self.forward(X)
+        return (probs > 0.5).astype(int)
+
     def initialize_visualization(self):
-        self.fig = plt.figure(figsize=(15, 6))
-        gs = self.fig.add_gridspec(1, 2, width_ratios=[1.5, 1])  # grid spec layout, make network plot 1.5x width of loss
+        self.fig = plt.figure(figsize=(20, 6))
+        gs = self.fig.add_gridspec(1, 3, width_ratios=[2, 1, 1])  # grid spec layout, make network plot 2x width of loss and decision boundaries
+
+        # Network plot
         self.ax_nn = self.fig.add_subplot(gs[0, 0])
-        self.ax_loss = self.fig.add_subplot(gs[0, 1])
         self.ax_nn.axis('off')
+        self.ax_nn.grid(False)
+        
+        # Loss plot
+        self.ax_loss = self.fig.add_subplot(gs[0, 1])
         self.ax_loss.set_title('Training Loss')
         self.ax_loss.set_xlabel('Epoch')
         self.ax_loss.set_ylabel('Loss')
 
-        # Set the aspect ratio to be equal
-        self.ax_nn.set_aspect('equal', adjustable='box')
-
-        # Define neuron positions for a 3-layer network like the image
-        self.input_neurons = [(0, 1.75), (0, 3.25)]
-        self.hidden_neurons = [(2, 1), (2, 2.5), (2, 4)]
-        self.output_neurons = [(4, 2.5)]
-
-        # Plot neurons
-        for neuron in self.input_neurons + self.hidden_neurons + self.output_neurons:
-            self.ax_nn.add_patch(plt.Circle(neuron, 0.1, color='black'))
-
-        # Define connections
-        self.connections = [
-            (self.input_neurons[0], self.hidden_neurons[0]),
-            (self.input_neurons[0], self.hidden_neurons[1]),
-            (self.input_neurons[0], self.hidden_neurons[2]),
-            (self.input_neurons[1], self.hidden_neurons[0]),
-            (self.input_neurons[1], self.hidden_neurons[1]),
-            (self.input_neurons[1], self.hidden_neurons[2]),
-            (self.hidden_neurons[0], self.output_neurons[0]),
-            (self.hidden_neurons[1], self.output_neurons[0]),
-            (self.hidden_neurons[2], self.output_neurons[0])
-        ]
-
-        # Plot connections
-        for conn in self.connections:
-            self.ax_nn.plot([conn[0][0], conn[1][0]], [conn[0][1], conn[1][1]], 'k-', linewidth=1, alpha=0.4)
+        # Decision boundaries plot
+        self.ax_decision = self.fig.add_subplot(gs[0, 2])
+        self.ax_decision.set_title('Decision Boundaries')
 
         plt.ion()  # Interactive mode on
         self.fig.canvas.mpl_connect('key_press_event', self.on_quit_key)
-        plt.tight_layout()
+        plt.tight_layout(pad=4.0)
         plt.show()
 
-    def update_visualization(self, X, epoch):
-        self.forward(X)
+    def plot_network(self):
         self.ax_nn.clear()
-        self.ax_nn.axis('off')
+        self.ax_nn.axis('off')  # Ensure gridlines are off
+
+        self.layers = [self.input_size, self.h, self.output_size]
+
+        # get neuron positions
+        self.pos = []
+        for i, layer_size in enumerate(self.layers):
+            if i == 0:
+                y_neuron_pos = np.linspace(1, 2 * max(self.layers), layer_size*2)
+                y_neuron_pos = y_neuron_pos[1:-1]
+            elif i == len(self.layers) - 1:
+                y_neuron_pos = [np.mean(np.linspace(1, 2 * max(self.layers), self.h))]  # Center vertically based on hidden neurons
+            else:
+                y_neuron_pos = np.linspace(1, 2 * max(self.layers), layer_size)
+            x_neuron_pos = [i * 3] * layer_size
+            layer_positions = list(zip(x_neuron_pos, y_neuron_pos))
+            self.pos.append(layer_positions)
+
+        # init circles for neurons
+        for layer in self.pos:
+            for neuron in layer:
+                self.ax_nn.add_patch(plt.Circle(neuron, 0.2, edgecolor='black', fill=False))
+
+        # plot connections between neurons
+        for i in range(len(self.pos) - 1):
+            for n_start in self.pos[i]:
+                for n_end in self.pos[i + 1]:
+                    self.ax_nn.plot([n_start[0], n_end[0]], [n_start[1], n_end[1]], 'k-', linewidth=1, alpha=0.25)
+
+        self.ax_nn.set_xlim(-0.2, 2 * (len(self.layers) - 1) +0.2)
+        self.ax_nn.set_ylim(0.7, 2 * max(self.layers) + 0.3)
+        self.ax_nn.set_aspect('equal', adjustable='datalim')  # Set the aspect ratio to be equal
+        plt.draw()
+
+    def update_network_plot(self, X, epoch):
+        self.forward(X)
+        self.plot_network()
+
+        base_font_size = 13
+        min_font_size = 2
+        font_size = max(base_font_size - (self.h), min_font_size)
 
         # Plot neurons with updated values
-        for i, neuron in enumerate(self.input_neurons):
-            self.ax_nn.add_patch(plt.Circle(neuron, 0.1, edgecolor='black', fill=False))
-            for j in range(X.shape[0]): # go through all (4) x inputs
-                self.ax_nn.text(neuron[0] - 0.4, neuron[1] - 0.1 + 0.12*j, f'{X[j, i]:.2f}', ha='left', va='top')
+        for i, layer in enumerate(self.pos):
+            for j, neuron in enumerate(layer):
+                if i == 0:  # plotting input layer
+                    for k in range(X.shape[0]):
+                        self.ax_nn.text(neuron[0] - 0.75, neuron[1] - 0.18 + 0.22 * k, f'{X[k, j]:.2f}', ha='left', va='top', fontsize=font_size)
 
-        for i, neuron in enumerate(self.hidden_neurons):
-            self.ax_nn.add_patch(plt.Circle(neuron, 0.1, color='black', alpha=self.a1[0, i]))
-            self.ax_nn.text(neuron[0], neuron[1] + 0.4, f'Z: {self.z1[0, i]:.4f}', ha='center', va='top')
-            self.ax_nn.text(neuron[0], neuron[1] + 0.25, f'A: {self.a1[0, i]:.4f}', ha='center', va='top')
-            self.ax_nn.text(neuron[0], neuron[1] - 0.15, f'B: {self.b1[0, i]:.4f}', ha='center', va='top')
+                elif i == len(self.pos) - 1:  # output layer
+                    self.ax_nn.add_patch(plt.Circle(neuron, 0.2, color='black', alpha=self.a2[0, 0]))
+                    self.ax_nn.text(neuron[0], neuron[1] + 0.7, f'Z: {self.z2[0, 0]:.4f}', ha='center', va='top', fontsize=font_size)
+                    self.ax_nn.text(neuron[0], neuron[1] + 0.48, f'A: {self.a2[0, 0]:.4f}', ha='center', va='top', fontsize=font_size)
+                    self.ax_nn.text(neuron[0], neuron[1] - 0.35, f'B: {self.b2[0, 0]:.4f}', ha='center', va='top', fontsize=font_size)
 
-        for i, neuron in enumerate(self.output_neurons):
-            self.ax_nn.add_patch(plt.Circle(neuron, 0.1, color='black', alpha=self.a2[0, i]))
-            self.ax_nn.text(neuron[0], neuron[1] + 0.4, f'Z: {self.z2[0, i]:.4f}', ha='center', va='top')
-            self.ax_nn.text(neuron[0], neuron[1] + 0.25, f'A: {self.a2[0, i]:.4f}', ha='center', va='top')
-            self.ax_nn.text(neuron[0], neuron[1] - 0.15, f'B: {self.b2[0, i]:.4f}', ha='center', va='top')
-
-        # Plot connections
-        for conn in self.connections:
-            self.ax_nn.plot([conn[0][0], conn[1][0]], [conn[0][1], conn[1][1]], 'k-', linewidth=1, alpha=0.5)
+                else:  # hidden layer
+                    self.ax_nn.add_patch(plt.Circle(neuron, 0.2, color='black', alpha=self.a1[0, j]))
+                    self.ax_nn.text(neuron[0], neuron[1] + 0.7, f'Z: {self.z1[0, j]:.4f}', ha='center', va='top', fontsize=font_size)
+                    self.ax_nn.text(neuron[0], neuron[1] + 0.48, f'A: {self.a1[0, j]:.4f}', ha='center', va='top', fontsize=font_size)
+                    self.ax_nn.text(neuron[0], neuron[1] - 0.35, f'B: {self.b1[0, j]:.4f}', ha='center', va='top', fontsize=font_size)
 
         self.ax_nn.set_title(f'Epoch {epoch}', pad=40)
         plt.draw()
@@ -194,16 +221,59 @@ class SmallNet:
         self.ax_loss.set_xlim([-x_padding, epoch+x_padding])
         self.ax_loss.set_ylim([0, max(self.losses) + 0.1])
         plt.draw()
+
+    def plot_decision_boundaries(self, X, y):
+        self.ax_decision.clear()
+
+        # define grid of plot to show the 4 points with some padding
+        x_min, x_max = X[:, 0].min() - 1, X[:, 0].max() + 1
+        y_min, y_max = X[:, 1].min() - 1, X[:, 1].max() + 1
+
+        # make a mesh of points to cover whole space
+        xx, yy = np.meshgrid(np.arange(x_min, x_max, 0.01),
+                            np.arange(y_min, y_max, 0.01))
+        
+        # flatten xx and yy meshes and stack them into 2d arr
+        # each row in [] is a column vector and is a point in the input spaced
+        '''
+        xx:
+            [[0 1 2]
+            [0 1 2]
+            [0 1 2]]
+        yy:
+            [[0 0 0]
+            [1 1 1]
+            [2 2 2]]
+        grid_points:
+            [[0 0]
+            [1 0]
+            [2 0]
+            [0 1]
+            [1 1]
+            [2 1]
+            [0 2]
+            [1 2]
+            [2 2]]
+        '''
+        grid_space = np.c_[xx.ravel(), yy.ravel()]
+        
+        # Predict class labels for each point in the grid
+        Z = self.predict(grid_space)
+        Z = Z.reshape(xx.shape)
+        
+        self.ax_decision.contourf(xx, yy, Z, alpha=0.8) # plot contours of decision boundaries, coloring region according to Z
+        self.ax_decision.scatter(X[:, 0], X[:, 1], c=y, edgecolor='k', marker='o')
+        self.ax_decision.set_xlabel('Input 1')
+        self.ax_decision.set_ylabel('Input 2')
+        self.ax_decision.set_title('Decision Boundaries')
+        plt.draw()
         plt.pause(0.01)
 
     def on_quit_key(self, e):
         if e.key == 'q':
             self.stop_flag = True
 
-def mse(y, y_hat):
-    return np.mean(np.square(y - y_hat))
-
-if __name__ == '__main__':
+def run_xor(h=3, ner=100):
     X = np.array([ # input data is a 2bit truth table
         [0,0], # if both are False...
         [0,1], # if first is False and second is True...
@@ -218,9 +288,15 @@ if __name__ == '__main__':
         [0] # then XOR gives False
     ])
 
-    net = SmallNet(3, 100)
+    net = SmallNet(h, ner)
     net.initialize_visualization()
+    net.plot_network()
     net.train(X, y)
 
     y_pred = net.forward(X)
     print(f"Predicted output:\n {y_pred}")
+
+
+
+if __name__ == '__main__':
+    run_xor(3, 100)
