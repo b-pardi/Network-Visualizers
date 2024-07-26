@@ -1,7 +1,7 @@
 import argparse
 import numpy as np
-from xor_problem import xor
-from mnist import digits
+import src.xor as xor
+import src.mnist_digits as mnist_digits
 
 def main():
     parser = argparse.ArgumentParser(description="Choose network to visualize")
@@ -11,7 +11,7 @@ def main():
     parser.add_argument('-hn', '--hidden_neurons', type=int, help='Number of neurons in hidden layer (default 3)')
     parser.add_argument('-ner', '--num_epochs_refresh_visualizer', type=int, help='Number of epochs per refreshing of visualizers (effects speed of training, default 100)')
 
-    script_group.add_argument('--mnist', action='store_true', help='Run MNIST classifier')
+    script_group.add_argument('-md', '--mnist_digits', action='store_true', help='Run MNIST classifier')
 
     args = parser.parse_args()
     if args.xor:
@@ -21,6 +21,9 @@ def main():
         if args.num_epochs_refresh_visualizer:
             kwargs['ner'] = args.num_epochs_refresh_visualizer
         xor.run_xor(**kwargs)
+
+    elif args.mnist_digits:
+        mnist_digits.run()
 
 
 if __name__ == '__main__':

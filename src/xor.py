@@ -1,10 +1,9 @@
 import numpy as np
 from tqdm import tqdm
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
 
-from src.helpers import *
-from src.plotting import *
+from utils.errs import mse
+from utils.act import sigmoid, d_sigmoid
 
 class SmallNet:
     """Small feed forward network designed to solve the classic XOR problem.
@@ -28,14 +27,6 @@ class SmallNet:
         self.h = h
         self.input_size = 2
         self.output_size = 1
-
-    def sigmoid(self, x):
-        # activation function
-        return 1 / (1 + np.exp(-x))
-    
-    def d_sigmoid(self, x):
-        # derivative of activation for back prop
-        return self.sigmoid(x) * (1 - self.sigmoid(x))
     
     def forward(self, X):
         # go through network from input to output and return output neuron value
@@ -44,10 +35,10 @@ class SmallNet:
         # for xor, m is 4.
 
         self.z1 = np.dot(X, self.w1) + self.b1 # (m, 2) dot (2, 3) + (1, 3) = (m, 3)
-        self.a1 = self.sigmoid(self.z1)
+        self.a1 = sigmoid(self.z1)
 
         self.z2 = np.dot(self.a1, self.w2) + self.b2 # (m, 3) dot (3, 1) + (1, 1) = (m, 1)
-        self.a2 = self.sigmoid(self.z2)
+        self.a2 = sigmoid(self.z2)
 
         return self.a2
     
@@ -71,7 +62,7 @@ class SmallNet:
         ''' # in comments below explaining derivations, 'del' represents partial derivative
 
         # del_L/del_z2 = del_L/del_yhat * del_yhat/del_z2; yhat = d_sigma(z2)
-        z2_grad = err * self.d_sigmoid(self.z2) # (m, 1)
+        z2_grad = err * d_sigmoid(self.z2) # (m, 1)
 
         # del_L/del_w2 = del_L/del_z2 * del_z2/del_w2; z2 = a1*w2 + b2 -> del_z2/del_w2 = a1
         w2_grad = np.dot(self.a1.T, z2_grad) # (3, m) dot (m, 1) = (3, 1)
@@ -84,7 +75,7 @@ class SmallNet:
         a1_grad = (z2_grad * self.w2.T) # (m, 1) dot (1, 3) = (m, 3)
 
         # del_L/del_z1 = del_L/del_a1 * del_a1/del_z1; a1 = sig(z1) -> del_a1/del_z1 = d_sig(z1)
-        z1_grad = a1_grad * self.d_sigmoid(self.z1) # (3, m) dot (m, 3) = (m, 3)
+        z1_grad = a1_grad * d_sigmoid(self.z1) # (3, m) dot (m, 3) = (m, 3)
 
         # del_L/del_w1 = del_L/del_z1 * del_z1/del_w1; z1 = X * w1 + b1 -> del_z1/del_w1 = X
         w1_grad = np.dot(X.T, z1_grad) # (2, m) dot (m, 3) = (2, 3)
