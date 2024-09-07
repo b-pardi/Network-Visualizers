@@ -69,11 +69,13 @@ You can see in the above plot, that there is no way to draw a single line to sep
 However if we draw two lines we can separate categories effectively
 ![XOR outputs can be separated with 2 lines](imgs/xor_problem/xor_2.png)
 
-The equivalent to drawing to lines is to use 2 hidden neurons to introduce non linear relationships.
+*Conceptually speaking* the equivalent to drawing two lines is to use two hidden neurons to introduce non linear relationships.
 
-**Note** We are technically not drawing 2 separate lines, rather having a function that makes one line curve since we have a 2nd degree polynomial function when 2 hidden neurons. This is better demonstrated in the intermediate training step as it starts to figure out the solution
+We are not technically drawing 2 separate lines, rather having the network transform points to a new 2D space where the points *become* linearly separable, and then interpreting this linear separation as it relates to our input space to make a decision (and to visualize the decision boundaries). This mapping is created from the non-linearities of the activation functions. When we interpret the linear decision boundary that was found in this new 2D space *back* to our original input space, the boundary is now curved and *resembles* a 2nd degree polynomial, however it is technically a linear piecewise function found mapped back to our original input space, where each neuron contributes a piece of the piecewise function. This is better demonstrated in the intermediate training step as it starts to figure out the solution, where we can see the boundary *starting* to form, showing a curved decision boundary. 
+
 ![Solution is not technically 2 lines, rather one 2nd degree polynomial line](imgs/xor_problem/xor_3.png)
 
+If we used 3 hidden neurons, we'd be transforming the points into 3D and find a plane that separates the points, then mapping back down for an output of the decision. This pattern extends s.t. n hidden neurons will map points to n dimensions.
 ---
 ## Planned implementations
 - MNIST hand written numbers
