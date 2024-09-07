@@ -166,9 +166,10 @@ class SmallNet:
                 for n_end in self.pos[i + 1]:
                     self.ax_nn.plot([n_start[0], n_end[0]], [n_start[1], n_end[1]], 'k-', linewidth=1, alpha=0.25)
 
-        self.ax_nn.set_xlim(-0.2, 2 * len(self.layers) + 0.2)
+        x_buffer = 1.1
+        total_width = 3 * (len(self.layers) - 1)  # Total width based on the number of layers and spacing
+        self.ax_nn.set_xlim(-x_buffer, x_buffer + total_width)
         self.ax_nn.set_ylim(0.7, 2 * max(self.layers) + 0.3)
-        print(f"Hidden neurons: {self.h}, current xlim: {self.ax_nn.get_xlim()}, current ylim: {self.ax_nn.get_ylim()}")
         self.ax_nn.set_aspect('equal', adjustable='datalim')  # Set the aspect ratio to be equal
         plt.draw()
 
