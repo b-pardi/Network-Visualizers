@@ -63,10 +63,12 @@ XOR takes two binary inputs and outputs a single binary output as shown in the f
 Plotting the inputs and outputs of this truth table results in something like this:
 
 ![XOR is not linearly separable](imgs/xor_problem/xor_1.png)
+
 You can see in the above plot, that there is no way to draw a single line to separate the two categories
 
 However if we draw two lines we can separate categories effectively
 ![XOR outputs can be separated with 2 lines](imgs/xor_problem/xor_2.png)
+
 The equivalent to drawing to lines is to use 2 hidden neurons to introduce non linear relationships.
 
 **Note** We are technically not drawing 2 separate lines, rather having a function that makes one line curve since we have a 2nd degree polynomial function when 2 hidden neurons. This is better demonstrated in the intermediate training step as it starts to figure out the solution
