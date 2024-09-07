@@ -113,7 +113,7 @@ class SmallNet:
 
     def initialize_visualization(self):
         self.fig = plt.figure(figsize=(20, 6))
-        gs = self.fig.add_gridspec(1, 3, width_ratios=[2, 1, 1])  # grid spec layout, make network plot 2x width of loss and decision boundaries
+        gs = self.fig.add_gridspec(1, 3, width_ratios=[2, 1, 1])  # grid spec layout, make the network plot 2x width of loss and decision boundaries
 
         # Network plot
         self.ax_nn = self.fig.add_subplot(gs[0, 0])
@@ -132,7 +132,7 @@ class SmallNet:
 
         plt.ion()  # Interactive mode on
         self.fig.canvas.mpl_connect('key_press_event', self.on_quit_key)
-        plt.tight_layout(pad=4.0)
+        plt.tight_layout(pad=2.0)
         plt.show()
 
     def plot_network(self):
@@ -166,8 +166,9 @@ class SmallNet:
                 for n_end in self.pos[i + 1]:
                     self.ax_nn.plot([n_start[0], n_end[0]], [n_start[1], n_end[1]], 'k-', linewidth=1, alpha=0.25)
 
-        self.ax_nn.set_xlim(-0.2, 2 * (len(self.layers) - 1) +0.2)
+        self.ax_nn.set_xlim(-0.2, 2 * len(self.layers) + 0.2)
         self.ax_nn.set_ylim(0.7, 2 * max(self.layers) + 0.3)
+        print(f"Hidden neurons: {self.h}, current xlim: {self.ax_nn.get_xlim()}, current ylim: {self.ax_nn.get_ylim()}")
         self.ax_nn.set_aspect('equal', adjustable='datalim')  # Set the aspect ratio to be equal
         plt.draw()
 
