@@ -64,14 +64,14 @@ Plotting the inputs and outputs of this truth table results in something like th
 
 ![XOR is not linearly separable](imgs/xor_problem/xor_1.png)
 
-You can see in the above plot, that there is no way to draw a single line to separate the two categories
+You can see in the above plot, that there is no way to draw a single line to separate the two categories.
 
 However if we draw two lines we can separate categories effectively
 ![XOR outputs can be separated with 2 lines](imgs/xor_problem/xor_2.png)
 
 *Conceptually speaking* the equivalent to drawing two lines is to use two hidden neurons to introduce non linear relationships.
 
-We are not technically drawing 2 separate lines, rather having the network transform points to a new 2D space where the points *become* linearly separable, and then interpreting this linear separation as it relates to our input space to make a decision (and to visualize the decision boundaries). This mapping is created from the non-linearities of the activation functions. When we interpret the linear decision boundary that was found in this new 2D space *back* to our original input space, the boundary is now curved and *resembles* a 2nd degree polynomial, however it is technically a linear piecewise function found mapped back to our original input space, where each neuron contributes a piece of the piecewise function. This is better demonstrated in the intermediate training step as it starts to figure out the solution, where we can see the boundary *starting* to form, showing a curved decision boundary. 
+However, we are not technically drawing 2 separate lines, rather having the network transform points to a new 2D space (feature space) where the points *become* linearly separable, and then interpreting this linear separation as it relates to our input space to make a decision (and to visualize the decision boundaries). This mapping is created from the non-linearities of the activation functions. When we interpret the linear decision boundary that was found in this new 2D space as it relates to our original input space, the boundary is now curved and *resembles* a 2nd degree polynomial, however it is technically a linear piecewise function found in the feature space, where each neuron contributes a piece of the piecewise function. This curved decision boundary is better demonstrated in the intermediate training steps as it starts to figure out the solution, where we can see an accurate boundary *starting* to form.
 
 ![Solution is not technically 2 lines, rather one 2nd degree polynomial line](imgs/xor_problem/xor_3.png)
 
