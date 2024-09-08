@@ -43,7 +43,9 @@ The script accepts several command-line arguments to control the visualization a
 
 To run the XOR neural network with a custom number of hidden neurons and visualizer refresh rate:
 
-`python main.py --xor -hn 5 -ner 200`
+`python main.py --xor -hn 3 -ner 200`
+
+**Note** It is most useful to run the XOR network with 2 or 3 hidden neurons, as those allow you to see the feature space mapping of the input points. Beyond 3 dimensions it is not feasible for us to visualize, the feature space plot is omitted.
 
 ## Currently implemented:
 ### XOR (Exclusive OR) Problem Neural Net
@@ -75,7 +77,20 @@ However, we are not technically drawing 2 separate lines, rather having the netw
 
 ![Solution is not technically 2 lines, rather one 2nd degree polynomial line](imgs/xor_problem/xor_3.png)
 
-If we used 3 hidden neurons, we'd be transforming the points into 3D and find a plane that separates the points, then mapping back down for an output of the decision. This pattern extends s.t. n hidden neurons will map points to n dimensions.
+In the figure below we can see the plot showing the network has found a solution and is interpreted in our input space, and how it relates to the feature space where we found a linearly separable solution. 
+
+![Input space vs 2D feature space](imgs/xor_problem/xor_4.png)
+
+**Note** 2 of the True outputs (pink) have been transformed such that they essentially overlap eachother.
+
+This visualization works as we are transforming our input space from 2D to another space still in 2D. 
+
+If we used 3 hidden neurons, we'd be transforming the points into 3D and find a plane that separates the points, then interpreting that transformation back in our original 2D input space for an output of the decision. This pattern extends s.t. n hidden neurons will map points to n dimensions.
+
+We can see how 3 hidden neurons gives a 3D feature space below
+
+![Input space vs 3D feature space](imgs/xor_problem/xor_5.png)
+
 ---
 ## Planned implementations
 - MNIST hand written numbers

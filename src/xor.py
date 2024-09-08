@@ -1,9 +1,11 @@
 import numpy as np
 from tqdm import tqdm
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 
 from utils.errs import mse
-from utils.act import sigmoid, d_sigmoid
+from utils.activations import sigmoid, d_sigmoid
+from utils.log_reg import LogisticRegression
 
 class SmallNet:
     """Small feed forward network designed to solve the classic XOR problem.
@@ -15,7 +17,7 @@ class SmallNet:
     Output layer is just 1 neuron, whether it is True or False
 
     """    
-    def __init__(self, h=3, num_epochs_per_refresh=100):
+    def __init__(self, h=3, epochs=50000, num_epochs_per_refresh=100):
         self.w1 = np.random.randn(2,h) # 2 inputs connecting to 3 hidden
         self.b1 = np.zeros((1,h)) # bias for hidden neurons
 
@@ -27,6 +29,7 @@ class SmallNet:
         self.h = h
         self.input_size = 2
         self.output_size = 1
+        self.epochs = epochs
     
     def forward(self, X):
         # go through network from input to output and return output neuron value
@@ -89,7 +92,8 @@ class SmallNet:
         self.w1 -= lr * w1_grad / m 
         self.b1 -= lr * b1_grad / m 
 
-    def train(self, X, y, epochs=50000, lr=0.1):
+    def train(self, X, y, lr=0.1):
+        epochs = self.epochs
         progress_bar = tqdm(range(epochs), desc="Training", unit="epoch")
         self.losses = []
         for epoch in progress_bar:
@@ -105,6 +109,9 @@ class SmallNet:
                 self.update_network_plot(X, epoch)
                 self.update_error_plot(epoch)
                 self.plot_decision_boundaries(X, y)
+                if self.h == 2 or self.h == 3:
+                    self.plot_feature_space(y)
+                
             progress_bar.set_postfix(epoch=epoch, loss=loss)
 
     def predict(self, X):
@@ -112,8 +119,12 @@ class SmallNet:
         return (probs > 0.5).astype(int)
 
     def initialize_visualization(self):
-        self.fig = plt.figure(figsize=(20, 6))
-        gs = self.fig.add_gridspec(1, 3, width_ratios=[2, 1, 1])  # grid spec layout, make the network plot 2x width of loss and decision boundaries
+        if self.h == 2 or self.h == 3:
+            self.fig = plt.figure(figsize=(24, 4))
+            gs = self.fig.add_gridspec(1, 4, width_ratios=[2, 1, 1, 1])  # grid spec layout, make the network plot 2x width of loss and decision boundaries
+        else:
+            self.fig = plt.figure(figsize=(20, 6))
+            gs = self.fig.add_gridspec(1, 3, width_ratios=[2, 1, 1])  # grid spec layout, make the network plot 2x width of loss and decision boundaries
 
         # Network plot
         self.ax_nn = self.fig.add_subplot(gs[0, 0])
@@ -129,6 +140,14 @@ class SmallNet:
         # Decision boundaries plot
         self.ax_decision = self.fig.add_subplot(gs[0, 2])
         self.ax_decision.set_title('Decision Boundaries')
+        self.ax_decision.set_xlabel('Input 1')
+        self.ax_decision.set_ylabel('Input 2')
+
+        # feature space plot
+        if self.h == 2:
+            self.ax_feature = self.fig.add_subplot(gs[0, 3])
+        elif self.h == 3:
+            self.ax_feature = self.fig.add_subplot(gs[0, 3], projection='3d')
 
         plt.ion()  # Interactive mode on
         self.fig.canvas.mpl_connect('key_press_event', self.on_quit_key)
@@ -202,7 +221,6 @@ class SmallNet:
 
         self.ax_nn.set_title(f'Epoch {epoch}', pad=40)
         plt.draw()
-        plt.pause(0.01)
 
     def update_error_plot(self, epoch):
         self.ax_loss.clear()
@@ -254,13 +272,53 @@ class SmallNet:
         Z = self.predict(grid_space)
         Z = Z.reshape(xx.shape)
         
-        self.ax_decision.contourf(xx, yy, Z, alpha=0.8) # plot contours of decision boundaries, coloring region according to Z
-        self.ax_decision.scatter(X[:, 0], X[:, 1], c=y, edgecolor='k', marker='o')
+        self.ax_decision.contourf(xx, yy, Z, alpha=0.8, cmap='cool') # plot contours of decision boundaries, coloring region according to Z
+        self.ax_decision.scatter(X[:, 0], X[:, 1], c=y, cmap='cool', edgecolor='k', marker='o')
+        self.ax_decision.set_title('Decision Boundaries')
         self.ax_decision.set_xlabel('Input 1')
         self.ax_decision.set_ylabel('Input 2')
-        self.ax_decision.set_title('Decision Boundaries')
+
+        self.predict(X) # reset so network variables do not have gridspace data points stored
+
         plt.draw()
         plt.pause(0.01)
+
+    def plot_feature_space(self, y):
+        self.ax_feature.cla()
+        activations = self.a1  # self.a1 contains the activations of the first hidden layer
+
+        # view decision boundary for feature space
+        log_reg = LogisticRegression()
+        log_reg.fit(activations, y)
+
+        # Determine the number of hidden neurons
+        if self.h == 2:
+            # Plot in 2D
+            self.ax_feature.scatter(activations[:, 0], activations[:, 1], s=100, c=y, cmap='cool')
+            plt.xlabel('Activation of Neuron 1')
+            plt.ylabel('Activation of Neuron 2')
+            plt.title('2D Feature Space Transformed by Hidden Layer')
+
+            # plot boundary line
+            x = np.array([activations[:, 0].min() - 1, activations[:, 0].max() + 1])
+            yhat = -(log_reg.weights[0] * x + log_reg.bias) / log_reg.weights[1]
+            self.ax_feature.plot(x, yhat, color='black', linestyle='--')
+        elif self.h == 3:
+            # Plot in 3D
+            self.ax_feature.scatter(activations[:, 0], activations[:, 1], activations[:, 2], s=200, c=y, cmap='cool')
+            self.ax_feature.set_xlabel('Activation of Neuron 1')
+            self.ax_feature.set_ylabel('Activation of Neuron 2')
+            self.ax_feature.set_zlabel('Activation of Neuron 3')
+            self.ax_feature.set_title('3D Feature Space Transformed by Hidden Layer')
+
+            # plot boundary plane
+            x_range = np.linspace(activations[:, 0].min() - 1, activations[:, 0].max() + 1, 10)
+            y_range  = np.linspace(activations[:, 1].min() - 1, activations[:, 1].max() + 1, 10)
+            xx, yy = np.meshgrid(x_range, y_range)
+            zz = -(log_reg.weights[0] * xx + log_reg.weights[1] * yy + log_reg.bias) / log_reg.weights[2]
+            self.ax_feature.plot_surface(xx, yy, zz, color='black', alpha=0.25)
+
+        plt.draw()
 
     def on_quit_key(self, e):
         if e.key == 'q':
@@ -281,7 +339,7 @@ def run_xor(h=3, ner=100):
         [0] # then XOR gives False
     ])
 
-    net = SmallNet(h, ner)
+    net = SmallNet(h, epochs=30000, num_epochs_per_refresh=ner)
     net.initialize_visualization()
     net.plot_network()
     net.train(X, y)
