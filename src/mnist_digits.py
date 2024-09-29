@@ -3,14 +3,9 @@ import matplotlib.pyplot as plt
 
 from utils.data import download_mnist, load_mnist
 from utils.normalize import max_norm
+from utils.activations import ReLULayer
+from utils.interfaces import Layer
 
-# Enforce an interface to ensure all derived classes have forward and backward methods
-class Layer:
-    def forward(self, input):
-        raise NotImplementedError
-
-    def backward(self, grad_output):
-        raise NotImplementedError
     
 class Conv2D(Layer):
     def __init__(self, in_channels=1, out_channels=8, filter_size=3, stride=1, pad=0):
@@ -151,23 +146,6 @@ class Conv2D(Layer):
             dX = dX[:, :, self.pad:-self.pad, self.pad:-self.pad]
 
         return dX, dW, db
-
-# ReLU Activation Layer
-class ReLULayer(Layer):
-    def forward(self, inputs):
-        """
-        Pseudocode:
-        - Apply ReLU function: f(x) = max(0, x)
-        - Store mask of positive values for backward pass.
-        """
-        pass
-
-    def backward(self, grad_output):
-        """
-        Pseudocode:
-        - Backpropagate only through positive inputs using the mask.
-        """
-        pass
 
 # Max Pooling Layer
 class MaxPoolingLayer(Layer):
