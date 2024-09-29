@@ -100,9 +100,11 @@ We can see how 3 hidden neurons gives a 3D feature space below
 **THIS IS A WORK IN PROGRESS**
 
 **Convolution Forward Pass**
+
 $$
 O_k^i(y,x) = \sum_{c=0}^{C_in - 1} \sum_{p=0}^{F - 1} \sum_{q=0}^{F - 1} X_c^i(y \cdot S + p, x \cdot S + q) \cdot W_c^k(p,q) + b^k
 $$
+
 Where:
     - $O_k^i(y,x)$ is the output at position $(y,x)$ for image $i$ and filter $k$.
     - $X_c^i$ is the input data for image $i$ and input channel $c$.
