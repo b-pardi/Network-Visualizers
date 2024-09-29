@@ -138,6 +138,7 @@ Gradient of the input is found by considering how each input pixel contributes t
 $$
 \frac{\partial L}{\partial X_c^i(m,n)} = \sum_k \sum_y \sum_x \frac{\partial L}{\partial O_k^i(y,x)} \cdot \frac{\partial O_k^i(y,x)}{\partial X_c^i(m,n)} = \sum_k \sum_y \sum_x \frac{\partial L}{\partial O_k^i(y,x)} \cdot W_c^k(p,q)
 $$
+
 Where $m$ and $p$ are the current filter coordinates, also found in the above forward pass:
     - $m = y \cdot S + p$
     - $n = x \cdot S + q$
