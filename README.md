@@ -6,9 +6,9 @@ Personal implementations of various networks without any ML libraries and visual
 - [Setup and Installation](#setup-and-installation)
 - [Handling CLI Arguments](#handling-cli-arguments)
   - [Example Usage](#example-usage)
-- [Currently Implemented](#currently-implemented)
-  - [XOR (Exclusive OR) Problem Neural Network](#xor-exclusive-or-problem-neural-network)
-  - [Convolutional Neural Network - Mnist Handwritten Digits](#convolutional-neural-network-mnist-handwritten-digits)
+- [Currently Implemented Network Backgrounds](#currently-implemented-network-backgrounds)
+  - [XOR (Exclusive OR) Problem Neural Net](#xor-exclusive-or-problem-neural-net)
+  - [Convolutional Neural Network - Mnist Handwritten Digits](#convolutional-neural-network---mnist-handwritten-digits)
 - [Planned Implementations](#planned-implementations)
 - [Contributing](#contributing)
 ---
