@@ -17,7 +17,9 @@ Personal implementations of various networks without any ML libraries and visual
     `git clone https://github.com/yourusername/Network-Visualizers.git`
     `cd Network-Visualizers`
 
-2. Install the required dependencies:
+2. Install the required dependencies (virtual environment recommended):
+    `python -m venv venv`
+    `.\venv\Scripts\activate`
     `pip install -r requirements.txt`
 
 3. Run the desired neural network visualizer:
@@ -45,9 +47,9 @@ To run the XOR neural network with a custom number of hidden neurons and visuali
 
 `python main.py --xor -hn 3 -ner 200`
 
-**Note** It is most useful to run the XOR network with 2 or 3 hidden neurons, as those allow you to see the feature space mapping of the input points. Beyond 3 dimensions it is not feasible for us to visualize, the feature space plot is omitted.
+**Note** It is most useful to run the XOR network with 2 or 3 hidden neurons, as those allow you to see the feature space mapping of the input points. Beyond 3 dimensions it is not feasible for us to visualize, the feature space plot is omitted. However the network will still run and train and other plots show.
 
-## Currently implemented:
+## Currently Implemented Network Backgrounds:
 ### XOR (Exclusive OR) Problem Neural Net
 Simple neural network with 3 layers (1 input, 1 hidden, 1 output) to solve the XOR gate problem.
 The XOR problem is a fundamental in machine learning, introducing the concept non linearly separable classification
