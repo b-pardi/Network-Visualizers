@@ -28,7 +28,7 @@ class Conv2D(Layer):
 
         # size ordered as such allows for easier mat mul (matches input dimensions)
         self.weights = np.random.normal(0, variance, size=(out_channels, in_channels, filter_size, filter_size))
-        self.biases = np.zeros((out_channels,)) # one bias term for each filter (out channel)
+        self.biases = np.zeros((out_channels,), dtype=np.float32) # one bias term for each filter (out channel)
 
     def zero_pad(self, inputs):
         padded_arr = np.pad(
@@ -57,13 +57,13 @@ class Conv2D(Layer):
         out_size = (in_size - self.filter_size) // self.stride + 1
 
         # init output of feature map which stores conv results
-        out_feature_map = np.zeros((batch_size, self.out_channels, out_size, out_size))
+        out_feature_map = np.zeros((batch_size, self.out_channels, out_size, out_size), dtype=np.float32)
 
         # convolution process
         for img_idx in range(batch_size):           # iterate over all imgs in batch
             for filter in range(self.out_channels): # iterate over each filter (output channel)
-                for y in range(out_size):         # iterate over vertically
-                    for x in range(out_size):     # iterate over horizontally
+                for y in range(out_size):           # iterate over vertically
+                    for x in range(out_size):       # iterate over horizontally
                         # get start and end indices of where the filter currently is in the img
                         filter_start_x = x * self.stride
                         filter_end_x = filter_start_x + self.filter_size
@@ -86,20 +86,71 @@ class Conv2D(Layer):
             
         return out_feature_map
 
-    def backward(self, grad_output):
+    def backward(self, d_out, inputs):
         """
-        Pseudocode:
-        - Inputs: numpy array of shape (batch_size, in_channels, height, width).
-        - If padding is not zero, apply zero-padding to the input.
-        - Create an output array of the correct size based on the input size,
-          stride, and padding.
-        - For each filter:
-            - Slide the filter over the input, applying element-wise multiplication 
-              and summing the results to form the output feature map.
-        - Store the input and output for use in the backward pass.
-        - Return the output.
+        Perform the backward pass through the convolutional layer.
+        SEE README FOR MORE DETAILS AND MATH BEHIND THE CODE
+
+        Args:
+        - d_out: Gradient of the loss with respect to the output of this layer.
+                Shape: (batch_size, out_channels, out_size, out_size)
+        - inputs: The original input data to this layer during the forward pass.
+                Shape: (batch_size, in_channels, in_size, in_size)
+                
+        Returns:
+        - dX: Gradient of the loss with respect to the input data.
+            Shape: (batch_size, in_channels, in_size, in_size)
+        - dW: Gradient of the loss with respect to the filter weights.
+            Shape: (out_channels, in_channels, filter_size, filter_size)
+        - db: Gradient of the loss with respect to the biases.
+            Shape: (out_channels,)
         """
-        pass
+        # zero pad image if self.pad is not 0
+        # we pad in back prop since we want to find gradients wrt to the padded inputs
+        # ensuring that borders of original image receive correct gradient contributions
+        if self.pad > 0:
+            inputs = self.zero_pad(inputs)
+        
+        dW = np.zeros_like(self.weights, dtype=np.float32) # init array for gradient of weights
+        db = np.zeros_like(self.biases, dtype=np.float32) # init array for gradient of biases
+        dX = np.zeros_like(inputs, dtype=np.float32)
+
+        batch_size, in_channels, in_size = inputs.shape[:-1]
+        out_channels, out_size = d_out.shape[1:-1]
+
+        # convolve similarly to forward pass
+        for img_idx in range(batch_size):               # iterate over each img in batch
+            for filter_idx in range(self.out_channels): # iterate over each filter for each img
+                
+                # Since bias is added directly to output,
+                # its grad is the sum of upstream grads (d_out) over all spatial position and batch samples for each filter
+                db[filter_idx] += np.sum(d_out[img_idx, filter_idx, :, :])
+                
+                for y in range(out_size):               # iterate over vertically
+                    for x in range(out_size):           # iterate over horizontally
+                        # get current current position's gradient of loss (how much this position effects the loss)
+                        cur_d_out_value = d_out[img_idx, filter_idx, y, x]
+
+                        # get start and end indices of where the filter currently is in the img
+                        filter_start_x = x * self.stride
+                        filter_end_x = filter_start_x + self.filter_size
+
+                        filter_start_y = y * self.stride
+                        filter_end_y = filter_start_y + self.filter_size
+
+                        # accumulate gradient wrt weights
+                        # 
+                        input_patch = inputs[img_idx, :, filter_start_y:filter_end_y, filter_start_x:filter_end_x]
+                        dW[filter_idx] += cur_d_out_value * input_patch
+
+                        dX[img_idx, :, filter_start_y:filter_end_y, filter_start_x:filter_end_x] += cur_d_out_value * self.weights[filter_idx]
+
+        # remove padding from gradient with respect to inputs
+        # padding itself does not corrrespond to any real input data so padded gradients discarded
+        if self.pad > 0:
+            dX = dX[:, :, self.pad:-self.pad, self.pad:-self.pad]
+
+        return dX, dW, db
 
 # ReLU Activation Layer
 class ReLULayer(Layer):
@@ -277,4 +328,3 @@ def run_mnist_training():
     plot_mnist_digit(x_train[random_train_idx], y_train[random_train_idx], x_test[random_test_idx], y_test[random_test_idx])
 
     # test code
-    
