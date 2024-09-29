@@ -106,13 +106,13 @@ O_k^i(y,x) = \sum_{c=0}^{C_in - 1} \sum_{p=0}^{F - 1} \sum_{q=0}^{F - 1} X_c^i(y
 $$
 
 Where:
-    - $O_k^i(y,x)$ is the output at position $(y,x)$ for image $i$ and filter $k$.
-    - $X_c^i$ is the input data for image $i$ and input channel $c$.
-    - $W_c^k$ is the filter weights for filter $k$ and input channel $c$.
-    - $b^k$ is the bias for filter $k$.
-    - $F$ is the filter size.
-    - $S$ is the stride.
-    - $C_{in}$ is the number of input channels.
+- $O_k^i(y,x)$ is the output at position $(y,x)$ for image $i$ and filter $k$.
+- $X_c^i$ is the input data for image $i$ and input channel $c$.
+- $W_c^k$ is the filter weights for filter $k$ and input channel $c$.
+- $b^k$ is the bias for filter $k$.
+- $F$ is the filter size.
+- $S$ is the stride.
+- $C_{in}$ is the number of input channels.
 
 **Convolution Backward Pass**
 The various gradient formulas arise from applying chain rule to the convolution operation above.
@@ -140,8 +140,8 @@ $$
 $$
 
 Where $m$ and $p$ are the current filter coordinates, also found in the above forward pass:
-    - $m = y \cdot S + p$
-    - $n = x \cdot S + q$
+- $m = y \cdot S + p$
+- $n = x \cdot S + q$
 
 
 
