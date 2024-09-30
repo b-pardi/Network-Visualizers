@@ -8,6 +8,7 @@ def main():
     script_group = parser.add_mutually_exclusive_group(required=True)
 
     script_group.add_argument('--xor', action='store_true', help='Run the XOR classifier')
+    parser.add_argument('-e', '--epochs', type=int, help='Number of epochs to train (default 30,000)')
     parser.add_argument('-hn', '--hidden_neurons', type=int, help='Number of neurons in hidden layer (default 3)')
     parser.add_argument('-ner', '--num_epochs_refresh_visualizer', type=int, help='Number of epochs per refreshing of visualizers (effects speed of training, default 100)')
 
