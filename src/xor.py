@@ -120,14 +120,14 @@ class SmallNet:
 
     def initialize_visualization(self):
         if self.h == 2 or self.h == 3:
-            self.fig = plt.figure(figsize=(24, 4))
-            gs = self.fig.add_gridspec(1, 4, width_ratios=[2, 1, 1, 1])  # grid spec layout, make the network plot 2x width of loss and decision boundaries
+            self.fig = plt.figure(figsize=(14, 6))
+            gs = self.fig.add_gridspec(2, 3, width_ratios=[1.1, 1, 1.2], height_ratios=[1,1])  # grid spec layout, make the network plot 2x width of loss and decision boundaries
         else:
-            self.fig = plt.figure(figsize=(20, 6))
-            gs = self.fig.add_gridspec(1, 3, width_ratios=[2, 1, 1])  # grid spec layout, make the network plot 2x width of loss and decision boundaries
+            self.fig = plt.figure(figsize=(8, 6))
+            gs = self.fig.add_gridspec(2, 2, width_ratios=[1, 1], height_ratios=[1 ,1])  # grid spec layout, make the network plot 2x width of loss and decision boundaries
 
         # Network plot
-        self.ax_nn = self.fig.add_subplot(gs[0, 0])
+        self.ax_nn = self.fig.add_subplot(gs[:, 0])
         self.ax_nn.axis('off')
         self.ax_nn.grid(False)
         
@@ -138,16 +138,16 @@ class SmallNet:
         self.ax_loss.set_ylabel('Loss')
 
         # Decision boundaries plot
-        self.ax_decision = self.fig.add_subplot(gs[0, 2])
+        self.ax_decision = self.fig.add_subplot(gs[1, 1])
         self.ax_decision.set_title('Decision Boundaries')
         self.ax_decision.set_xlabel('Input 1')
         self.ax_decision.set_ylabel('Input 2')
 
         # feature space plot
         if self.h == 2:
-            self.ax_feature = self.fig.add_subplot(gs[0, 3])
+            self.ax_feature = self.fig.add_subplot(gs[:, 2])
         elif self.h == 3:
-            self.ax_feature = self.fig.add_subplot(gs[0, 3], projection='3d')
+            self.ax_feature = self.fig.add_subplot(gs[:, 2], projection='3d')
 
         plt.ion()  # Interactive mode on
         self.fig.canvas.mpl_connect('key_press_event', self.on_quit_key)
@@ -205,17 +205,17 @@ class SmallNet:
             for j, neuron in enumerate(layer):
                 if i == 0:  # plotting input layer
                     for k in range(X.shape[0]):
-                        self.ax_nn.text(neuron[0] - 0.75, neuron[1] - 0.18 + 0.22 * k, f'{X[k, j]:.2f}', ha='left', va='top', fontsize=font_size)
+                        self.ax_nn.text(neuron[0] - 0.9, neuron[1] - 0.3 + 0.3 * k, f'{X[k, j]:.2f}', ha='left', va='top', fontsize=font_size)
 
                 elif i == len(self.pos) - 1:  # output layer
                     self.ax_nn.add_patch(plt.Circle(neuron, 0.2, color='black', alpha=self.a2[0, 0]))
-                    self.ax_nn.text(neuron[0], neuron[1] + 0.7, f'Z: {self.z2[0, 0]:.4f}', ha='center', va='top', fontsize=font_size)
+                    self.ax_nn.text(neuron[0], neuron[1] + 0.8, f'Z: {self.z2[0, 0]:.4f}', ha='center', va='top', fontsize=font_size)
                     self.ax_nn.text(neuron[0], neuron[1] + 0.48, f'A: {self.a2[0, 0]:.4f}', ha='center', va='top', fontsize=font_size)
                     self.ax_nn.text(neuron[0], neuron[1] - 0.35, f'B: {self.b2[0, 0]:.4f}', ha='center', va='top', fontsize=font_size)
 
                 else:  # hidden layer
                     self.ax_nn.add_patch(plt.Circle(neuron, 0.2, color='black', alpha=self.a1[0, j]))
-                    self.ax_nn.text(neuron[0], neuron[1] + 0.7, f'Z: {self.z1[0, j]:.4f}', ha='center', va='top', fontsize=font_size)
+                    self.ax_nn.text(neuron[0], neuron[1] + 0.8, f'Z: {self.z1[0, j]:.4f}', ha='center', va='top', fontsize=font_size)
                     self.ax_nn.text(neuron[0], neuron[1] + 0.48, f'A: {self.a1[0, j]:.4f}', ha='center', va='top', fontsize=font_size)
                     self.ax_nn.text(neuron[0], neuron[1] - 0.35, f'B: {self.b1[0, j]:.4f}', ha='center', va='top', fontsize=font_size)
 
@@ -339,7 +339,7 @@ def run_xor(h=3, ner=100):
         [0] # then XOR gives False
     ])
 
-    net = SmallNet(h, epochs=30000, num_epochs_per_refresh=ner)
+    net = SmallNet(h, epochs=50000, num_epochs_per_refresh=ner)
     net.initialize_visualization()
     net.plot_network()
     net.train(X, y)
