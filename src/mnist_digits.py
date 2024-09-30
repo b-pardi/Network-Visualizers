@@ -5,9 +5,30 @@ from utils.data import download_mnist, load_mnist
 from utils.normalize import max_norm
 from utils.activations import ReLULayer, SoftmaxLayer
 from utils.interfaces import Layer
+from utils.initializers import xavier_glorot_normal_init
 
     
 class Conv2D(Layer):
+    """
+    This class implements a 2D convolutional layer, which applies multiple learnable filters (or kernels) to the input image, 
+    scanning it across the spatial dimensions, and creating feature maps that capture various aspects of the input, 
+    such as edges, textures, or more complex patterns at deeper layers.
+
+    These filters that slide over the images perform element-wise multiplication with input at each location and sums the results, adding filter's bias at the end.
+    The result of this is a feature map of the original image, resembling the image less and less with subsequent conv layers
+    
+    Parameters:
+    - in_channels (int): Number of input channels (e.g., 1 for grayscale images, 3 for RGB images).
+    - out_channels (int): Number of filters (kernels) applied during the convolution, representing the number of output feature maps.
+    - filter_size (int): Size of the square filter (kernel) applied to the input (e.g., 3x3, 5x5).
+    - stride (int): The step size of the filter as it moves across the input.
+    - pad (int): Number of zeros added to the border of the input for padding.
+
+    Initialization:
+    - Weights are initialized using a Normal Xavier/Glorot initialization,
+    to help maintain the variance of the activations and gradients during training ensuring stable learning.
+    - Biases are initialized to zero
+    """
     def __init__(self, in_channels=1, out_channels=8, filter_size=3, stride=1, pad=0):
         self.in_channels = in_channels # channels of input data, init 3 for color (rgb) or 1 for grayscale
         self.out_channels = out_channels # represents number of kernels/filters in the conv layer
@@ -16,16 +37,14 @@ class Conv2D(Layer):
         self.pad = pad # how many empty pixels we 'pad' the border with
         
         # normal xavier/glorot initialization to help maintain stability of activation variance. Likely overkill for mnist digits, but it's for pedagogical purposes
-        # weights ~ N (mu, sigma); mu is 0, sigma is sqrt(2 / n); n is number of input and output neurons to current layer
-        n_in = in_channels * filter_size **2
-        n_out = out_channels
-        variance = np.sqrt(2 / (n_in + n_out))
-
         # size ordered as such allows for easier mat mul (matches input dimensions)
-        self.weights = np.random.normal(0, variance, size=(out_channels, in_channels, filter_size, filter_size))
+        self.weights = xavier_glorot_normal_init(in_channels * filter_size **2, out_channels, (out_channels, in_channels, filter_size, filter_size))
         self.biases = np.zeros((out_channels,), dtype=np.float32) # one bias term for each filter (out channel)
 
     def zero_pad(self, inputs):
+        """
+        adds padding of 0 values around border of image depending on self.pad
+        """
         padded_arr = np.pad(
             inputs,
             pad_width=((0,0),   # specify which of 4 dims to pad (only pad img, not batch size or in chans)
@@ -39,8 +58,36 @@ class Conv2D(Layer):
         return padded_arr
 
     def forward(self, inputs):
-        # receives 4D array (batch_size, in_channels, in_size, in_size) -> [64, 1, 28, 28]
+        """
+        Performs the forward pass of the 2D convolution operation. The method takes the input image(s) 
+        and applies a set of filters (kernels) to produce output feature maps.
+
+        Args:
+        - inputs (ndarray): A 4D input tensor of shape (batch_size, in_channels, in_size, in_size), 
+          where `batch_size` is the number of images in the batch, `in_channels` is the number of channels 
+          (e.g., 1 for grayscale, 3 for RGB), and size are the spatial dimensions of the input (square images only).
+
+        Returns:
+        - out_feature_map (ndarray): A 4D tensor representing the output feature maps after applying convolution, 
+          with shape (batch_size, out_channels, out_size, out_size). Each output channel corresponds to one filter, 
+          and out_size is determined by the input size, filter size, stride, and padding.
+
+        Process:
+        1. Zero Padding (if applicable): If padding is enabled (`self.pad > 0`), the input is padded 
+           to control the output size.
+        2. Convolution: For each input image and each filter:
+            - The filter is applied to a section of the input, performing an element-wise 
+              multiplication with the patch and summing the results.
+            - The filter then moves across the image, stepping by the stride value, and this process is repeated 
+              for the entire image.
+        3. Bias Addition: After convolution, a bias term is added to the result.
+        4. Output Feature Map: The results from all filters are stored in the output feature map, 
+           which represents the convolved output.
         
+        The result is a compressed representation of the input that emphasizes certain features (e.g., edges, 
+        textures) learned by the filters, making it suitable for further processing in deeper network layers.
+        """
+        # receives 4D array (batch_size, in_channels, in_size, in_size) -> [64, 1, 28, 28]
         # zero pad image if self.pad is not 0
         if self.pad > 0:
             inputs = self.zero_pad(inputs)
@@ -195,6 +242,23 @@ class MaxPoolingLayer(Layer):
         return self.pool_out
 
     def backward(self, d_out):
+        """
+        Backward pass of the max pooling layer.
+
+        The backward pass for max pooling computes the gradient of the loss with respect to the input of the pooling layer.
+        In max pooling, during the forward pass, only the maximum value in each pooling window is propagated forward.
+        Therefore, in the backward pass, the gradient from the next layer (d_out) is passed only to the position of the 
+        maximum value within the original input patch, and the other positions within the patch receive zero gradients.
+
+        Args:
+        - d_out (ndarray): The gradient of the loss with respect to the output of the max pooling layer. It has the same shape
+        as the pooled output, which is (batch_size, num_channels, out_height, out_width).
+
+        Returns:
+        - dX (ndarray): The gradient of the loss with respect to the input of the max pooling layer (same shape as the original input),
+        with shape (batch_size, num_channels, in_height, in_width). The gradients are propagated only to the positions 
+        of the maximum values that were selected during the forward pass, while all other positions receive zero gradients.
+        """
         # extract dimensions of inputs and d_out (gradients)
         batch_size, num_channels, in_size, _ = self.inputs.shape
 
@@ -223,44 +287,125 @@ class MaxPoolingLayer(Layer):
 class FlattenLayer(Layer):
     def forward(self, inputs):
         """
-        Pseudocode:
-        - Reshape the multi-dimensional input into a 2D array.
-        """
-        pass
+        Reshape the multi-dimensional input into a 2D array.
 
-    def backward(self, grad_output):
+        Args:
+        - inputs: A 4D tensor of shape (batch_size, channels, height, width) or similar.
+
+        Returns:
+        - Flattened 2D tensor of shape (batch_size, channels * height * width).
         """
-        Pseudocode:
-        - Reshape gradient output back to the input's original shape.
+        self.in_shape = inputs.shape
+        batch_size = self.in_shape[0]
+
+        # keep batch_size and flatten all other dimensions.
+        return inputs.reshape(batch_size, -1)
+
+    def backward(self, d_out):
         """
-        pass
+        Reshape gradient output back to the input's original shape.
+        Args:
+        - d_out: A 2D tensor of shape (batch_size, flattened_size) representing the gradient from the next layer.
+        
+        Returns:
+        - The gradient reshaped back to the original input shape (e.g., batch_size, channels, height, width).    
+        """
+        return d_out.reshape(self.in_shape)
 
 # Fully Connected Layer (Dense)
 class DenseLayer(Layer):
-    def __init__(self, input_size, output_size):
-        """
-        Pseudocode:
-        - Initialize weights and biases.
-        - `input_size`: Number of input features.
-        - `output_size`: Number of output neurons.
-        """
-        pass
+    """
+    Dense Layer (Fully Connected Layer) performing an affine transformation on the input: y = xW + b
+    
+    The dense layer is a fully connected layer, meaning each input node is connected to every output node via learnable 
+    weights. It is used to combine features learned by convolutional or other layers into a more compact representation 
+    and is often used as the final layer in a network for tasks such as classification.
+
+    Attributes:
+    - in_features (int): Number of input features (i.e., the size of the input vector).
+    - out_features (int): Number of output features (i.e., the number of neurons in the layer).
+    - weights (ndarray): The learnable weight matrix of shape (in_features, out_features).
+    - biases (ndarray): The learnable bias vector of shape (out_features,).
+    
+    The layer performs a matrix multiplication of the input with the weights and adds the biases:
+    Output = X (dot) W + b, 
+    """
+    def __init__(self, in_features, out_features):
+        self.in_features = in_features
+        self.out_features = out_features
+        self.weights = xavier_glorot_normal_init(in_features, out_features, (in_features, out_features))
+        self.biases = np.zeros(out_features, dtype=np.float32)
 
     def forward(self, inputs):
         """
-        Pseudocode:
-        - Apply affine transformation: z = xW + b
-        - Store inputs for backward pass.
-        """
-        pass
+        Forward pass of the dense layer.
+        y = xW + b
 
-    def backward(self, grad_output):
+        y: (batch_size x out_features)
+        x: (batch_size x in_features)
+        W: (in_features x out_features)
+        b: (1 x out_features)
+        
+        Args:
+        - inputs (ndarray): A 2D tensor of shape (batch_size, in_features) where each row represents an input vector.
+        
+        Returns:
+        - output (ndarray): A 2D tensor of shape (batch_size, out_features) where each row represents the output 
+          after the matrix multiplication and bias addition.
         """
-        Pseudocode:
-        - Compute gradient of loss w.r.t. weights, biases, and inputs.
-        - Update weights and biases using learning rate.
+        self.inputs = inputs
+        self.outputs = np.dot(inputs, self.weights) + self.biases
+        return self.outputs
+
+    def backward(self, d_out):
         """
-        pass
+        Backward pass of the dense layer (backpropagation).
+        find gradients of loss w.r.t inputs, weights, biases
+
+        (d represents a partial here, and del is delta, shorthand for the partial of the var w.r.t loss fn)
+        given that the gradient of the loss w.r.t outputs is dL/dy = del_y,
+        and we know that y = XW + b,
+        and since loss L depends on y, which depends on each of inputs, weights, and biases
+        inputs - dL/dX = dL/dy * dy/dx -> del_x = del_y @ W.T
+        weights - dL/dW = dL/dy * dy/dW -> del_W = x.T @ del_y
+        biases - dL/db = dL/dy * dy/db - > del_b = 
+
+        Note: matrices become transposed as needed after derivative to align dimensions
+        Basically when derivating matrices, formally it is done in summation notation,
+        then we move/transpose matrices to fit the matrix multiplication definition:
+        C_ij = sum_k:n[ A_ik @ B_kj ]
+        showing captured summations over the shared index k.
+
+        Args:
+        - d_out (ndarray): Gradient of the loss with respect to the output of the dense layer (same shape as the output).
+        
+        Returns:
+        - d_inputs (ndarray): Gradient of the loss with respect to the input of the dense layer.
+        - d_weights (ndarray): Gradient of the loss with respect to the weights of the dense layer.
+        - d_biases (ndarray): Gradient of the loss with respect to the biases of the dense layer.
+        """
+        # Gradient w.r.t input x: delta_x = delta_y @ W.T
+        # Using chain rule: delta_x = delta_y * dy/dx
+        # Since y = xW + b, dy/dx = W
+        delta_x = np.dot(d_out, self.weights.T)
+        # delta_x shape: (N, D_in)
+
+        # Gradient w.r.t weights W: delta_W = x.T @ delta_y
+        # Using chain rule: delta_W = x^T * delta_y
+        # Each element of delta_W is the sum over the batch of input features times output gradients
+        delta_W = np.dot(self.inputs.T, d_out)
+        # delta_W shape: (D_in, D_out)
+
+        # Gradient w.r.t biases b: delta_b = sum over batch of delta_y
+        # Since each b_k affects each y_k equally, we sum over the batch
+        delta_b = np.sum(d_out, axis=0)
+        # delta_b shape: (D_out,)
+
+        # Store gradients for parameter updates
+        self.grad_W = delta_W
+        self.grad_b = delta_b
+
+        return delta_x  # Pass gradient back to previous layer
 
 # Neural Network Class
 class CNN:
