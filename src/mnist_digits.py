@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 
 from utils.data import download_mnist, load_mnist
 from utils.normalize import max_norm
-from utils.activations import ReLULayer
+from utils.activations import ReLULayer, SoftmaxLayer
 from utils.interfaces import Layer
 
     
@@ -57,8 +57,8 @@ class Conv2D(Layer):
         # convolution process
         for img_idx in range(batch_size):           # iterate over all imgs in batch
             for filter in range(self.out_channels): # iterate over each filter (output channel)
-                for y in range(out_size):           # iterate over vertically
-                    for x in range(out_size):       # iterate over horizontally
+                for y in range(out_size):           # iterate over map vertically
+                    for x in range(out_size):       # iterate over map horizontally
                         # get start and end indices of where the filter currently is in the img
                         filter_start_x = x * self.stride
                         filter_end_x = filter_start_x + self.filter_size
@@ -149,20 +149,18 @@ class Conv2D(Layer):
 
 # Max Pooling Layer
 class MaxPoolingLayer(Layer):
-    def __init__(self, pool_size, stride):
-        """
-        Pseudocode:
-        - Set pooling window size and stride.
-        """
-        pass
+    """
+    MaxPoolingLayer:
+
+    The operation extracts the maximum value in each non-overlapping region (window) 
+    defined by the kernel size and stride.
+    """
+    def __init__(self, filter_size=3, stride=1):
+        # no weights or biases for pooling
+        self.filter_size = 3
+        self.stride = 1
     
     def forward(self, inputs):
-        """
-        Pseudocode:
-        - Slide pooling window over input.
-        - Take the maximum value in each window.
-        - Store indices of max values for backward pass.
-        """
         pass
 
     def backward(self, grad_output):
