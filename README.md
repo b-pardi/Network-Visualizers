@@ -6,8 +6,9 @@ Personal implementations of various networks without any ML libraries and visual
 - [Setup and Installation](#setup-and-installation)
 - [Handling CLI Arguments](#handling-cli-arguments)
   - [Example Usage](#example-usage)
-- [Currently Implemented](#currently-implemented)
-  - [XOR (Exclusive OR) Problem Neural Network](#xor-exclusive-or-problem-neural-network)
+- [Currently Implemented Network Backgrounds](#currently-implemented-network-backgrounds)
+  - [XOR (Exclusive OR) Problem Neural Net](#xor-exclusive-or-problem-neural-net)
+  - [Convolutional Neural Network - Mnist Handwritten Digits](#convolutional-neural-network---mnist-handwritten-digits)
 - [Planned Implementations](#planned-implementations)
 - [Contributing](#contributing)
 ---
@@ -17,7 +18,9 @@ Personal implementations of various networks without any ML libraries and visual
     `git clone https://github.com/yourusername/Network-Visualizers.git`
     `cd Network-Visualizers`
 
-2. Install the required dependencies:
+2. Install the required dependencies (virtual environment recommended):
+    `python -m venv venv`
+    `.\venv\Scripts\activate`
     `pip install -r requirements.txt`
 
 3. Run the desired neural network visualizer:
@@ -45,9 +48,9 @@ To run the XOR neural network with a custom number of hidden neurons and visuali
 
 `python main.py --xor -hn 3 -ner 200`
 
-**Note** It is most useful to run the XOR network with 2 or 3 hidden neurons, as those allow you to see the feature space mapping of the input points. Beyond 3 dimensions it is not feasible for us to visualize, the feature space plot is omitted.
+**Note** It is most useful to run the XOR network with 2 or 3 hidden neurons, as those allow you to see the feature space mapping of the input points. Beyond 3 dimensions it is not feasible for us to visualize, the feature space plot is omitted. However the network will still run and train and other plots show.
 
-## Currently implemented:
+## Currently Implemented Network Backgrounds:
 ### XOR (Exclusive OR) Problem Neural Net
 Simple neural network with 3 layers (1 input, 1 hidden, 1 output) to solve the XOR gate problem.
 The XOR problem is a fundamental in machine learning, introducing the concept non linearly separable classification
@@ -92,6 +95,58 @@ We can see how 3 hidden neurons gives a 3D feature space below
 ![Input space vs 3D feature space](imgs/xor_problem/xor_5.png)
 
 ---
+
+### Convolutional Neural Network - Mnist Handwritten Digits
+**THIS IS A WORK IN PROGRESS**
+
+**Convolution Forward Pass**
+
+$$
+O_k^i(y,x) = \sum_{c=0}^{C_in - 1} \sum_{p=0}^{F - 1} \sum_{q=0}^{F - 1} X_c^i(y \cdot S + p, x \cdot S + q) \cdot W_c^k(p,q) + b^k
+$$
+
+Where:
+- $O_k^i(y,x)$ is the output at position $(y,x)$ for image $i$ and filter $k$.
+- $X_c^i$ is the input data for image $i$ and input channel $c$.
+- $W_c^k$ is the filter weights for filter $k$ and input channel $c$.
+- $b^k$ is the bias for filter $k$.
+- $F$ is the filter size.
+- $S$ is the stride.
+- $C_{in}$ is the number of input channels.
+
+**Convolution Backward Pass**
+The various gradient formulas arise from applying chain rule to the convolution operation above.
+
+Gradient w.r.t the bias term
+
+$$
+\frac{\partial L}{\partial b^k} = \sum_i \sum_y \sum_x \frac{\partial L}{\partial O_i^k(y,x)} \cdot \frac{\partial O_i^k(y,x)}{\partial b^k} = \sum_i \sum_y \sum_x \frac{\partial L}{\partial O_i^k(y,x)}
+$$
+
+
+**Gradient w.r.t the weights**
+The weights of each filter are involved in attaining the output through its multiplication with the output patches. So the gradient of the loss with respect to a weight $W_c^k(p,q)$ in a filter k is the sum over all patches where that weight contributed to the output, times the upstream gradient $\frac{\partial L}{\partial O_k^i(y,x)}$
+
+$$
+\frac{\partial L}{\partial W_c^k(p,q)} = \sum_i \sum_y \sum_x \frac{\partial L}{\partial O_k^i(y,x)} \cdot \frac{\partial O_k^i(y,x)}{\partial W_c^k(p,q)} = \sum_i \sum_y \sum_x \frac{\partial L}{\partial O_k^i(y,x)} \cdot X_c^i(y \cdot S + p, x \cdot S + q)
+$$
+
+
+**Gradient w.r.t the inputs**
+Gradient of the input is found by considering how each input pixel contributes to multiple overlapping output patches. The gradient with respect to a pixel $X_c^i(m,n)$ is the sum of all gradients from output feature maps that were influenced by that pixel. Keeping in mind that the derivative of the output with respect to the input is just the weight at that corresponding position in the filter (hence the simplification on the right).
+
+$$
+\frac{\partial L}{\partial X_c^i(m,n)} = \sum_k \sum_y \sum_x \frac{\partial L}{\partial O_k^i(y,x)} \cdot \frac{\partial O_k^i(y,x)}{\partial X_c^i(m,n)} = \sum_k \sum_y \sum_x \frac{\partial L}{\partial O_k^i(y,x)} \cdot W_c^k(p,q)
+$$
+
+Where $m$ and $p$ are the current filter coordinates, also found in the above forward pass:
+- $m = y \cdot S + p$
+- $n = x \cdot S + q$
+
+
+
+---
+
 ## Planned implementations
 - MNIST hand written numbers
 - attention model predictions

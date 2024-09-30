@@ -24,7 +24,7 @@ def main():
         xor.run_xor(**kwargs)
 
     elif args.mnist_digits:
-        mnist_digits.run()
+        mnist_digits.run_mnist_training()
 
 
 if __name__ == '__main__':
