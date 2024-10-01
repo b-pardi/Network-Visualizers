@@ -2,6 +2,9 @@ import numpy as np
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+import matplotlib.patches as mpatches
+import matplotlib.cm as cm
+import matplotlib.colors as mcolors
 
 from utils.errs import mse
 from utils.activations import sigmoid, d_sigmoid
@@ -125,6 +128,10 @@ class SmallNet:
         else:
             self.fig = plt.figure(figsize=(8, 6))
             gs = self.fig.add_gridspec(2, 2, width_ratios=[1, 1], height_ratios=[1 ,1])  # grid spec layout, make the network plot 2x width of loss and decision boundaries
+
+        # get color map to use for all plots (that need color maps)
+        self.cmap = cm.get_cmap('cool')
+        self.cnorm = mcolors.Normalize(vmin=0, vmax=1)
 
         # Network plot
         self.ax_nn = self.fig.add_subplot(gs[:, 0])
@@ -277,6 +284,12 @@ class SmallNet:
         self.ax_decision.set_title('Decision Boundaries')
         self.ax_decision.set_xlabel('Input 1')
         self.ax_decision.set_ylabel('Input 2')
+        
+        # Create custom handles for the two classes
+        class_0 = mpatches.Patch(color=self.cmap(self.cnorm(0)), label='False (0)')
+        class_1 = mpatches.Patch(color=self.cmap(self.cnorm(1)), label='True (1)')
+
+        self.ax_decision.legend(handles=[class_0, class_1], loc='best')
 
         self.predict(X) # reset so network variables do not have gridspace data points stored
 
