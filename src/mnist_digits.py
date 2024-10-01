@@ -409,12 +409,17 @@ class DenseLayer(Layer):
 
 # Neural Network Class
 class CNN:
+    """
+    A simple self implemented CNN model for multi-class classification (e.g., MNIST).
+    
+    This CNN consists of Conv2D, ReLU, MaxPooling, Flatten, and Dense layers,
+    with a final softmax activation layer to classify
+    """
     def __init__(self, layers):
-        """
-        Pseudocode:
-        - Initialize network with a list of layers.
-        """
-        pass
+        # network initialized as list of layers
+        self.layers = [
+
+        ]
     
     def forward(self, X):
         """
@@ -451,20 +456,6 @@ class CNN:
         """
         pass
 
-# Loss Function
-def compute_loss(y_pred, y_true):
-    """
-    Pseudocode:
-    - Compute loss (e.g., Cross-Entropy Loss).
-    """
-    pass
-
-def compute_loss_gradient(y_pred, y_true):
-    """
-    Pseudocode:
-    - Compute gradient of loss w.r.t. network output.
-    """
-    pass
 
 def plot_mnist_digit(train_img, train_label, test_img, test_label):
     plt.figure(figsize=(8,4))
@@ -481,7 +472,7 @@ def plot_mnist_digit(train_img, train_label, test_img, test_label):
 
     plt.show()
 
-def run_mnist_training():
+def run_mnist():
     mnist_md5_dict = {
         'train_images': 'f68b3c2dcbeaaa9fbdd348bbdeb94873',
         'train_labels': 'd53e105ee54ea40749a09fcbcd1e9432',
