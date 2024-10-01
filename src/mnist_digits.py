@@ -94,6 +94,8 @@ class Conv2D(Layer):
         if self.pad > 0:
             inputs = self.zero_pad(inputs)
 
+        self.inputs = inputs
+
         in_size = inputs.shape[-1] # dimension of square image input
         batch_size = inputs.shape[0] # number of images in batch
 
@@ -130,7 +132,7 @@ class Conv2D(Layer):
             
         return out_feature_map
 
-    def backward(self, d_out, inputs):
+    def backward(self, d_out):
         """
         Perform the backward pass through the convolutional layer.
         SEE README FOR MORE DETAILS AND MATH BEHIND THE CODE
@@ -152,14 +154,14 @@ class Conv2D(Layer):
         # zero pad image if self.pad is not 0
         # we pad in back prop since we want to find gradients wrt to the padded inputs
         # ensuring that borders of original image receive correct gradient contributions
-        if self.pad > 0:
-            inputs = self.zero_pad(inputs)
+        '''if self.pad > 0:
+            inputs = self.zero_pad(inputs)'''
         
         dW = np.zeros_like(self.weights, dtype=np.float32) # init array for gradient of weights
         db = np.zeros_like(self.biases, dtype=np.float32) # init array for gradient of biases
-        dX = np.zeros_like(inputs, dtype=np.float32)
+        dX = np.zeros_like(self.inputs, dtype=np.float32)
 
-        batch_size, in_channels, in_size = inputs.shape[:-1]
+        batch_size, in_channels, in_size = self.inputs.shape[:-1]
         out_channels, out_size = d_out.shape[1:-1]
 
         # convolve similarly to forward pass
@@ -184,7 +186,7 @@ class Conv2D(Layer):
 
                         # accumulate gradient wrt weights
                         # 
-                        input_patch = inputs[img_idx, :, filter_start_y:filter_end_y, filter_start_x:filter_end_x]
+                        input_patch = self.inputs[img_idx, :, filter_start_y:filter_end_y, filter_start_x:filter_end_x]
                         dW[filter_idx] += cur_d_out_value * input_patch
 
                         dX[img_idx, :, filter_start_y:filter_end_y, filter_start_x:filter_end_x] += cur_d_out_value * self.weights[filter_idx]
@@ -283,6 +285,7 @@ class MaxPoolingLayer(Layer):
 
                         # incoming gradient from d_out is pooled only to the location of the max value
                         # index for d_out is [y // self.stride, x // self.stride] in the pooled output
+                        print(d_out[img_idx, filter_idx, y // self.stride, x // self.stride])
                         max_grad = mask * d_out[img_idx, filter_idx, y // self.stride, x // self.stride]
                         dX[img_idx, filter_idx, y:y + self.filter_size, x:x + self.filter_size] += max_grad
         return dX
@@ -433,7 +436,7 @@ class CNN:
             MaxPoolingLayer(filter_size=2, stride=2),
 
             # second layer 2D convolution, 8 in channels from previous conv out, 16 out channels for 16 new filters
-            Conv2D(in_channels=1, out_channels=8, filter_size=3, stride=1),
+            Conv2D(in_channels=8, out_channels=16, filter_size=3, stride=1),
 
             # activate filter weights
             ReLULayer(),
@@ -441,13 +444,16 @@ class CNN:
             # pooling again
             MaxPoolingLayer(filter_size=2, stride=2),
 
+            # flatten to prepare for dense layer
+            FlattenLayer(),
+
             # to find fc in_features, look at most recent conv2d's out channels,
             # and dimension max pool has reduced down to (28 / 2 / 2) = 7
-            DenseLayer(in_features=16 * 7 * 7, out_features=256), # funnel down to fewer neurons before going straight to num_classes
+            DenseLayer(in_features=16 * 5 * 5, out_features=256), # funnel down to fewer neurons before going straight to num_classes
 
             ReLULayer(),
             
-            DenseLayer(in_features=128, out_features=num_classes),
+            DenseLayer(in_features=256, out_features=num_classes),
 
             SoftmaxLayer()
         ]
