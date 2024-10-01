@@ -56,3 +56,4 @@ def cce_loss_gradient(y_prob, y_true):
     
     """
     dL = y_prob - y_true
+    return dL

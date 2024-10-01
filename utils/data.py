@@ -4,6 +4,21 @@ import gzip
 import os
 import hashlib
 
+def onehot_encode(labels, num_classes):
+    """
+    Convert an array of labels to one-hot encoded format using NumPy.
+    
+    Args:
+    - labels (ndarray): Array of label integers.
+    - num_classes (int): Number of classes (default is 10 for MNIST).
+    
+    Returns:
+    - one_hot (ndarray): One-hot encoded labels.
+    """
+    one_hot = np.zeros((labels.size, num_classes))
+    one_hot[np.arange(labels.size), labels] = 1
+    return one_hot
+
 def compute_md5_checksum(fp):
     md5_hash = hashlib.md5() # md5 hash object
     with open(fp, 'rb') as f:

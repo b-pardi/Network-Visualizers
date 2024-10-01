@@ -1,11 +1,13 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from tqdm import tqdm
 
-from utils.data import download_mnist, load_mnist
-from utils.normalize import max_norm
+from utils.data import download_mnist, load_mnist, onehot_encode
+from utils.normalize import constant_norm
 from utils.activations import ReLULayer, SoftmaxLayer
 from utils.interfaces import Layer
 from utils.initializers import xavier_glorot_normal_init
+from utils.errs import cce_loss, cce_loss_gradient
 
     
 class Conv2D(Layer):
@@ -120,7 +122,7 @@ class Conv2D(Layer):
 
                         # element-wise multiplication of 3D patch and 3D weights of corresponding filter, summing results
                         cur_filter_weights = self.weights[filter, :, :, :]
-                        cur_bias = self.bias[filter]
+                        cur_bias = self.biases[filter]
                         conv_value = np.sum(input_patch * cur_filter_weights)
                         conv_value += cur_bias
 
@@ -186,6 +188,9 @@ class Conv2D(Layer):
                         dW[filter_idx] += cur_d_out_value * input_patch
 
                         dX[img_idx, :, filter_start_y:filter_end_y, filter_start_x:filter_end_x] += cur_d_out_value * self.weights[filter_idx]
+
+        self.grad_W = dW
+        self.grad_b = db
 
         # remove padding from gradient with respect to inputs
         # padding itself does not corrrespond to any real input data so padded gradients discarded
@@ -415,46 +420,114 @@ class CNN:
     This CNN consists of Conv2D, ReLU, MaxPooling, Flatten, and Dense layers,
     with a final softmax activation layer to classify
     """
-    def __init__(self, layers):
+    def __init__(self, num_classes):
         # network initialized as list of layers
         self.layers = [
+            # first layer 2D convolution, 1 in channel for grayscale, 8 out channels for 8 filters, 3x3 filter
+            Conv2D(in_channels=1, out_channels=8, filter_size=3, stride=1),
 
+            # activate filter weights
+            ReLULayer(),
+
+            # reduce image dimensionality keeping only important parts with max pooling
+            MaxPoolingLayer(filter_size=2, stride=2),
+
+            # second layer 2D convolution, 8 in channels from previous conv out, 16 out channels for 16 new filters
+            Conv2D(in_channels=1, out_channels=8, filter_size=3, stride=1),
+
+            # activate filter weights
+            ReLULayer(),
+
+            # pooling again
+            MaxPoolingLayer(filter_size=2, stride=2),
+
+            # to find fc in_features, look at most recent conv2d's out channels,
+            # and dimension max pool has reduced down to (28 / 2 / 2) = 7
+            DenseLayer(in_features=16 * 7 * 7, out_features=256), # funnel down to fewer neurons before going straight to num_classes
+
+            ReLULayer(),
+            
+            DenseLayer(in_features=128, out_features=num_classes),
+
+            SoftmaxLayer()
         ]
     
-    def forward(self, X):
+    def forward(self, x):
         """
-        Pseudocode:
-        - Pass input through each layer sequentially.
-        - Return final output.
-        """
-        pass
+        Forward Pass: propogate through layers and call each layer's forward function
 
-    def backward(self, loss_grad):
+        Args:
+        - x (ndarray): The input data (e.g., batch of images).
+        
+        Returns:
+        - x (ndarray): The final output after passing through all layers.
         """
-        Pseudocode:
-        - Pass gradient backward through each layer.
-        """
-        pass
 
-    def train(self, X_train, y_train, epochs, learning_rate):
-        """
-        Pseudocode:
-        - Iterate over epochs.
-        - For each batch in training data:
-            - Forward pass.
-            - Compute loss and loss gradient.
-            - Backward pass.
-            - Update parameters with gradients.
-        """
-        pass
+        for layer in self.layers:
+            x = layer.forward(x)
+        return x
 
-    def predict(self, X):
+    def backward(self, d_out):
         """
-        Pseudocode:
-        - Perform forward pass through the network.
-        - Return predictions.
+        Backward pass: Propagate the gradient through each layer in reverse order.
+        
+        Args:
+        - d_out (ndarray): The gradient of the loss with respect to the output.
+        
+        Returns:
+        - Gradients are computed and stored in the layers for parameter updates.
         """
-        pass
+        for layer in reversed(self.layers):
+            d_out = layer.backward(d_out)
+
+    def train(self, x_train, y_train, epochs, lr):
+        """"
+        Simple training loop using gradient descent.
+        
+        Args:
+        - X_train (ndarray): Training data (e.g., MNIST images).
+        - y_train (ndarray): One-hot encoded true labels for the training data.
+        - num_epochs (int): Number of training epochs.
+        - learning_rate (float): Learning rate for gradient descent.
+        """
+        num_train_samples = len(x_train)
+        for epoch in range(epochs):
+            epoch_loss = 0.
+            with tqdm(total=len(x_train), desc=f"Epoch {epoch + 1}/{epochs}", dynamic_ncols=True) as progress_bar:
+                for i in range(len(x_train)):
+                    # this index method ensures sample remains 2D instead of being flattened
+                    x_sample = x_train[i:i+1]  # Single image
+                    y_label = y_train[i:i+1]  # Single label (one-hot)
+
+                    probs = self.forward(x_sample) # forward pass
+
+                    loss = cce_loss(probs, y_label) # find loss of prediction
+                    epoch_loss += loss
+
+                    grad_loss = cce_loss_gradient(probs, y_label) # gradient of loss
+
+                    # start the backward loop with the loss of the prediction (dL/dx)
+                    self.backward(grad_loss)
+
+                    # gradient descent
+                    # update all weights and biases based each layer's stored grads
+                    for layer in self.layers:
+                        if hasattr(layer, 'weights'):
+                            layer.weights -= lr * layer.grad_W
+                            layer.biases -= lr * layer.grad_b
+
+                    # Update the progress bar and show the average loss per sample
+                    avg_loss = epoch_loss / (i + 1)  # Calculate the average loss so far
+                    progress_bar.set_postfix({'loss': avg_loss})  # Display the loss in the progress bar
+                    progress_bar.update(1)  # Increment the progress bar by 1
+
+    def predict(self, x):
+        """
+        Run a forward pass through the network to make a prediction
+        """
+
+        logits = self.forward(x)
+        return np.argmax(logits, axis=1)
 
 
 def plot_mnist_digit(train_img, train_label, test_img, test_label):
@@ -486,6 +559,25 @@ def run_mnist():
     # verify images loaded correct plotting a random one
     random_train_idx = np.random.randint(0, len(x_train))
     random_test_idx = np.random.randint(0, len(x_test))
-    plot_mnist_digit(x_train[random_train_idx], y_train[random_train_idx], x_test[random_test_idx], y_test[random_test_idx])
+    #plot_mnist_digit(x_train[random_train_idx], y_train[random_train_idx], x_test[random_test_idx], y_test[random_test_idx])
 
-    # test code
+    # normalize pixels values to be between 0 and 1
+    x_train = constant_norm(x_train, c=255.0)
+    x_test = constant_norm(x_test, c=255.0)
+
+    # reshape to have batch sizes
+    x_train = x_train.reshape(-1, 1, 28, 28)
+    x_test = x_test.reshape(-1, 1, 28, 28)
+
+    # one hot encode labels
+    y_train = onehot_encode(y_train, num_classes=10)
+
+    # create CNN object and run training
+    cnn = CNN(num_classes=10)
+    cnn.train(
+        x_train,
+        y_train,
+        epochs=10,
+        lr=0.01
+    )
+    
