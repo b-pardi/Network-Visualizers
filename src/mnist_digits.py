@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from tqdm import tqdm
+import pickle as pkl
 
 from utils.data import download_mnist, load_mnist, onehot_encode
 from utils.normalize import constant_norm
@@ -509,7 +510,7 @@ class CNN:
             d_out = layer.backward(d_out)
             #print(layer_name, f"after: grad out type: {type(d_out)}")
 
-    def train(self, x_train, y_train, epochs, lr):
+    def train(self, x_train, y_train, epochs, lr, batch_size):
         """"
         Simple training loop using gradient descent.
         
@@ -520,20 +521,29 @@ class CNN:
         - learning_rate (float): Learning rate for gradient descent.
         """
         num_train_samples = len(x_train)
+        num_batches = num_train_samples // batch_size
+
         for epoch in range(epochs):
+            # shuffle data each epoch so batches equally represent dataset
+            permutation = np.random.permutation(num_train_samples)
+            x_train = x_train[permutation]
+            y_train = y_train[permutation]
+
             epoch_loss = 0.
-            with tqdm(total=num_train_samples, desc=f"Epoch {epoch + 1}/{epochs}", dynamic_ncols=True) as progress_bar:
-                for i in range(num_train_samples):
+            with tqdm(total=num_batches, desc=f"Epoch {epoch + 1}/{epochs}", dynamic_ncols=True) as progress_bar:
+                for i in range(0, num_train_samples, batch_size):
+                    batch_end_idx = min(i+batch_size, num_train_samples)
+                    
                     # this index method ensures sample remains 2D instead of being flattened
-                    x_sample = x_train[i:i+1]  # Single image
-                    y_label = y_train[i:i+1]  # Single label (one-hot)
+                    x_batch = x_train[i:batch_end_idx]  # batch of images
+                    y_batch = y_train[i:batch_end_idx]  # batch of labels (one-hot)
 
-                    probs = self.forward(x_sample) # forward pass
+                    probs = self.forward(x_batch) # forward pass
 
-                    loss = cce_loss(probs, y_label) # find loss of prediction
+                    loss = cce_loss(probs, y_batch) # find loss of prediction
                     epoch_loss += loss
 
-                    grad_loss = cce_loss_gradient(probs, y_label) # gradient of loss
+                    grad_loss = cce_loss_gradient(probs, y_batch) # gradient of loss
 
                     # start the backward loop with the loss of the prediction (dL/dx)
                     self.backward(grad_loss)
@@ -546,7 +556,7 @@ class CNN:
                             layer.biases -= lr * layer.grad_b
 
                     # Update the progress bar and show the average loss per sample
-                    avg_loss = epoch_loss / (i + 1)  # Calculate the average loss so far
+                    avg_loss = epoch_loss / (batch_end_idx)  # Calculate the average loss so far
                     progress_bar.set_postfix({'loss': avg_loss})  # Display the loss in the progress bar
                     progress_bar.update(1)  # Increment the progress bar by 1
 
@@ -557,6 +567,10 @@ class CNN:
 
         logits = self.forward(x)
         return np.argmax(logits, axis=1)
+    
+    def save_model(self, fn):
+        with open(fn, 'wb') as out_file:
+            pkl.dump(self, out_file)
 
 
 def plot_mnist_digit(train_img, train_label, test_img, test_label):
@@ -607,6 +621,8 @@ def run_mnist():
         x_train,
         y_train,
         epochs=10,
-        lr=0.01
+        lr=0.01,
+        batch_size=32
     )
     
+    cnn.save_model("models/mnist_cnn.pkl")
