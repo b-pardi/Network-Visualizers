@@ -58,6 +58,10 @@ To run the XOR neural network with a custom number of hidden neurons, epochs, an
 
 ## Currently Implemented Network Backgrounds:
 ### XOR (Exclusive OR) Problem Neural Net
+
+[![Watch the video](https://i.ytimg.com/an_webp/zGUs17-CcHU/mqdefault_6s.webp?du=3000&sqp=COu19rcG&rs=AOn4CLBoHwnXLcO_-m3tZHgThDoMYdP_UQ)](https://www.youtube.com/watch?v=zGUs17-CcHU&t=37s)
+
+
 Simple neural network with 3 layers (1 input, 1 hidden, 1 output) to solve the XOR gate problem.
 The XOR problem is a fundamental in machine learning, introducing the concept non linearly separable classification
 
