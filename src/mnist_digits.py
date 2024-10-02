@@ -6,12 +6,13 @@ import pickle as pkl
 from utils.data import download_mnist, load_mnist, onehot_encode
 from utils.normalize import constant_norm
 from utils.activations import ReLULayer, SoftmaxLayer
-from utils.interfaces import Layer
+from utils.interfaces import Layer, LearnableLayer
 from utils.initializers import xavier_glorot_normal_init
 from utils.errs import cce_loss, cce_loss_gradient
+from utils.optimizers import AdamOptimizer
 
     
-class Conv2D(Layer):
+class Conv2D(LearnableLayer):
     """
     This class implements a 2D convolutional layer, which applies multiple learnable filters (or kernels) to the input image, 
     scanning it across the spatial dimensions, and creating feature maps that capture various aspects of the input, 
@@ -325,7 +326,7 @@ class FlattenLayer(Layer):
         return d_out.reshape(self.in_shape)
 
 # Fully Connected Layer (Dense)
-class DenseLayer(Layer):
+class DenseLayer(LearnableLayer):
     """
     Dense Layer (Fully Connected Layer) performing an affine transformation on the input: y = xW + b
     
@@ -510,18 +511,33 @@ class CNN:
             d_out = layer.backward(d_out)
             #print(layer_name, f"after: grad out type: {type(d_out)}")
 
-    def train(self, x_train, y_train, epochs, lr, batch_size):
+    def train(
+            self,
+            x_train,
+            y_train,
+            epochs,
+            batch_size,
+            optimizer
+        ):
         """"
-        Simple training loop using gradient descent.
+        Training loop using Adam optimizer for minibatch SGD with a train and validation loop.
         
         Args:
-        - X_train (ndarray): Training data (e.g., MNIST images).
-        - y_train (ndarray): One-hot encoded true labels for the training data.
-        - num_epochs (int): Number of training epochs.
-        - learning_rate (float): Learning rate for gradient descent.
+        - x_train, y_train: Training data and labels
+        - x_val, y_val: Validation data and labels for early stopping
+        - epochs: Number of training epochs
+        - batch_size: Batch size for mini-batch gradient descent
+        - optimizer: AdamOptimizer instance
+        - patience: Number of epochs to wait for improvement before stopping early
         """
         num_train_samples = len(x_train)
         num_batches = num_train_samples // batch_size
+
+        # init adam optimizer for learnable layers (layers with weights and biases)
+        optimizer.init_params(self.layers)
+
+        best_val_loss = np.inf # track best loss to determine early stop
+        patience_counter = 0 # track n_epochs without much improvement for early stop
 
         for epoch in range(epochs):
             # shuffle data each epoch so batches equally represent dataset
@@ -532,9 +548,9 @@ class CNN:
             epoch_loss = 0.
             with tqdm(total=num_batches, desc=f"Epoch {epoch + 1}/{epochs}", dynamic_ncols=True) as progress_bar:
                 for i in range(0, num_train_samples, batch_size):
+                    # find index of batch end while preventing i from reaching outside of all train samples
                     batch_end_idx = min(i+batch_size, num_train_samples)
                     
-                    # this index method ensures sample remains 2D instead of being flattened
                     x_batch = x_train[i:batch_end_idx]  # batch of images
                     y_batch = y_train[i:batch_end_idx]  # batch of labels (one-hot)
 
@@ -548,12 +564,9 @@ class CNN:
                     # start the backward loop with the loss of the prediction (dL/dx)
                     self.backward(grad_loss)
 
-                    # gradient descent
-                    # update all weights and biases based each layer's stored grads
-                    for layer in self.layers:
-                        if hasattr(layer, 'weights'):
-                            layer.weights -= lr * layer.grad_W
-                            layer.biases -= lr * layer.grad_b
+                    # replace traditional SGD with adam optimized SGD
+                    # still updates the weights and biases, just more effectively
+                    optimizer.update()
 
                     # Update the progress bar and show the average loss per sample
                     avg_loss = epoch_loss / (batch_end_idx)  # Calculate the average loss so far
@@ -615,14 +628,23 @@ def run_mnist():
     # one hot encode labels
     y_train = onehot_encode(y_train, num_classes=10)
 
+    # optimizer object
+    optim = AdamOptimizer(
+        lr=0.01,        # initial learning rate
+        beta1=0.9,      # decay rate for first moment; 0.9 -> care more about more recent gradients
+        beta2=0.999,    # decay rate for second moment; 0.999 -> keep longer history of past gradients
+        epsilon=1e-8    # prevent divide by 0
+    )
+
     # create CNN object and run training
     cnn = CNN(num_classes=10)
     cnn.train(
         x_train,
         y_train,
         epochs=10,
-        lr=0.01,
-        batch_size=32
+        batch_size=32,
+        optimizer=optim
     )
+
     
     cnn.save_model("models/mnist_cnn.pkl")
