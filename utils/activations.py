@@ -106,6 +106,7 @@ class SoftmaxLayer(Layer):
         sum_d_out_sm = np.sum(d_out * sm_out, axis=1, keepdims=True)
 
         dX = dX = sm_out * (d_out - sum_d_out_sm)
+
         return dX
 
 class TanhLayer(Layer):

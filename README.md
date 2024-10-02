@@ -15,21 +15,21 @@ Personal implementations of various networks without any ML libraries and visual
 ## Setup and Installation
 
 1. Clone the repository:
-    `git clone https://github.com/yourusername/Network-Visualizers.git`
-    `cd Network-Visualizers`
+    - `git clone https://github.com/yourusername/Network-Visualizers.git`
+    - `cd Network-Visualizers`
 
 2. Install the required dependencies (virtual environment recommended):
-    `python -m venv venv`
-    `.\venv\Scripts\activate`
-    `pip install -r requirements.txt`
+    - `python -m venv venv`
+    - Windows: `.\venv\Scripts\activate` Mac/Linux: `source venv/bin/activate`
+    - `pip install -r requirements.txt`
 
 3. Run the desired neural network visualizer:
 
     - **XOR Problem**:
     `python main.py --xor`
 
-    - **MNIST Digit Recognition (Planned)**:
-    `python main.py --mnist_digits`
+    - **MNIST Digit Recognition (WIP)**:
+    `python main.py --mnist`
 
 4. To exit training early, press 'q'
 
@@ -38,17 +38,23 @@ Personal implementations of various networks without any ML libraries and visual
 The script accepts several command-line arguments to control the visualization and configuration of the networks:
 
 - `--xor`: Run the XOR classifier
-- `-hn`, `--hidden_neurons`: Number of neurons in the hidden layer (default is 3)
-- `-ner`, `--num_epochs_refresh_visualizer`: Number of epochs per refreshing of visualizers (affects the speed of training; default is 100)
+    - `-hn`, `--hidden_neurons`: Number of neurons in the hidden layer (default is 3)
+    
 - `-md`, `--mnist_digits`: Run the MNIST digit classifier (planned implementation)
+
+- `-ner`, `--num_epochs_refresh_visualizer`: Number of epochs per refreshing of visualizers (affects the speed of training; default is 100 for xor)
+
+- `e`, `--epochs`: Number of epochs to train selected model
+
+**Note:** args shown above that are indented in the list indicate that they are only relevant to the parent arg. i.e. `-hn` is only used for `--xor`
 
 ### Example Usage
 
-To run the XOR neural network with a custom number of hidden neurons and visualizer refresh rate:
+To run the XOR neural network with a custom number of hidden neurons, epochs, and visualizer refresh rate:
 
-`python main.py --xor -hn 3 -ner 200`
+`python main.py --xor -hn 3 -ner 200 -e 40000`
 
-**Note** It is most useful to run the XOR network with 2 or 3 hidden neurons, as those allow you to see the feature space mapping of the input points. Beyond 3 dimensions it is not feasible for us to visualize, the feature space plot is omitted. However the network will still run and train and other plots show.
+**Note** It is most useful to run the XOR network with 2 or 3 hidden neurons, as those allow you to see the feature space mapping of the input points. Beyond 3 dimensions it is not feasible for us to visualize, so the feature space plot is omitted. However the network will still run and train with other plots showing.
 
 ## Currently Implemented Network Backgrounds:
 ### XOR (Exclusive OR) Problem Neural Net
@@ -98,6 +104,29 @@ We can see how 3 hidden neurons gives a 3D feature space below
 
 ### Convolutional Neural Network - Mnist Handwritten Digits
 **THIS IS A WORK IN PROGRESS**
+Here is a list of steps I outlined for this part of project, and the status of their completion, which should indicate the progress.
+- [x] Code to download, check hash, and prep data to send to cnn
+- [x] Define class structure and base layers, plan and organize files
+- [x] Implement Conv2D layer
+- [x] Xavier/Glorot weight initializations
+- [x] Tests for Conv2D forward and backward
+- [x] Implement ReLU and Softmax activation layers
+- [x] Tests for activation layers
+- [x] Implement helping layers (flatten and pooling)
+- [x] Tests for helping layers
+- [x] implement dense layer and derive gradients
+- [x] tests for dense layer
+- [x] implement CNN class training loop and layer formation
+- [ ] batch images instead of updating weights on all
+- [ ] stochastic gradient descent instead of full GD
+- [ ] implement the adam optimizer (or similar)
+- [ ] scale images down to 10 x 10
+- [ ] other optimizations/simplifications?
+- [ ] setup pygame visuals backend
+- [ ] filter pass live visual for sample image in training with weight and pixel values on top of filter/image
+- [ ] live confusion matrix on validation images
+- [ ] loop that shows images in dataset and heatmap of neurons' activations in all layers showing connections to which neurons are determining outputs for each image (can be done on trained model or validation images)
+- [ ] other visuals?
 
 **Convolution Forward Pass**
 
@@ -148,7 +177,8 @@ Where $m$ and $p$ are the current filter coordinates, also found in the above fo
 ---
 
 ## Planned implementations
-- MNIST hand written numbers
+- MNIST hand written numbers -> CNN
+- random forest visuals, showing multiple trees in ensemble converging on decision
 - attention model predictions
 
 ## Contributing

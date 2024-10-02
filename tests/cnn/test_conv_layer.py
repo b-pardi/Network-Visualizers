@@ -64,10 +64,13 @@ def test_conv_forward(conv_layer, test_input, expected_forward_output):
     assert np.array_equal(output, expected_forward_output), f"Expected {expected_forward_output}, but got {output}"
 
 def test_conv_backward(conv_layer, test_input, d_out, expected_dX, expected_dW, expected_db):
-    # Perform the backward pass
-    dX, dW, db = conv_layer.backward(d_out, test_input)
+    # Forward pass to initialize inputs
+    conv_layer.forward(test_input)
     
+    # Perform the backward pass
+    dX = conv_layer.backward(d_out)
+
     # Check that the gradients match the expected values
     np.testing.assert_array_equal(dX, expected_dX)
-    np.testing.assert_array_equal(dW, expected_dW)
-    np.testing.assert_array_equal(db, expected_db)
+    np.testing.assert_array_equal(conv_layer.grad_W, expected_dW)
+    np.testing.assert_array_equal(conv_layer.grad_b, expected_db)

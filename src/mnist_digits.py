@@ -199,7 +199,7 @@ class Conv2D(Layer):
         if self.pad > 0:
             dX = dX[:, :, self.pad:-self.pad, self.pad:-self.pad]
 
-        return dX, dW, db
+        return dX
 
 # Max Pooling Layer
 class MaxPoolingLayer(Layer):
@@ -285,7 +285,10 @@ class MaxPoolingLayer(Layer):
 
                         # incoming gradient from d_out is pooled only to the location of the max value
                         # index for d_out is [y // self.stride, x // self.stride] in the pooled output
-                        print(d_out[img_idx, filter_idx, y // self.stride, x // self.stride])
+                        
+                        #print(batch_size, filter_idx, type(img_idx), type(filter_idx), type(y // self.stride), type(x // self.stride), type(mask), type(d_out))
+                        #print(d_out, '\n', d_out.shape, type(d_out), type(d_out[0]))
+                        #print(d_out.shape)
                         max_grad = mask * d_out[img_idx, filter_idx, y // self.stride, x // self.stride]
                         dX[img_idx, filter_idx, y:y + self.filter_size, x:x + self.filter_size] += max_grad
         return dX
@@ -362,6 +365,7 @@ class DenseLayer(Layer):
           after the matrix multiplication and bias addition.
         """
         self.inputs = inputs
+        #print(inputs.shape, inputs[0], '\n', self.weights.shape, self.weights[0])
         self.outputs = np.dot(inputs, self.weights) + self.biases
         return self.outputs
 
@@ -422,33 +426,43 @@ class CNN:
     
     This CNN consists of Conv2D, ReLU, MaxPooling, Flatten, and Dense layers,
     with a final softmax activation layer to classify
+
+    for comments below describing size, b refers to batch size, and initial image size is based on 28x28 mnist images
     """
     def __init__(self, num_classes):
         # network initialized as list of layers
         self.layers = [
             # first layer 2D convolution, 1 in channel for grayscale, 8 out channels for 8 filters, 3x3 filter
+            # shape in: b, 1, 28, 28
             Conv2D(in_channels=1, out_channels=8, filter_size=3, stride=1),
+            # shape out: b, 8, 26, 26; with stride of 1, dims reduced by filter_size - 1, and 8 filters applied
 
             # activate filter weights
-            ReLULayer(),
+            ReLULayer(), # does not effect dimensions
 
             # reduce image dimensionality keeping only important parts with max pooling
+            # shape in: b, 8, 26, 26 from prev conv2d layer
             MaxPoolingLayer(filter_size=2, stride=2),
+            # shape out: b, 8, 13, 13 dims reduce by factor of (2-1) // 2 + 1 = 2
 
             # second layer 2D convolution, 8 in channels from previous conv out, 16 out channels for 16 new filters
+            # shape in: b, 8, 13, 13 from previous pooling layer
             Conv2D(in_channels=8, out_channels=16, filter_size=3, stride=1),
+            # shape out: b, 16, 11, 11 dims reduce by 2, 16 filters used in this conv layer
 
             # activate filter weights
-            ReLULayer(),
+            ReLULayer(), # dims unaffected by relu
 
             # pooling again
+            # shape in: b, 8, 11, 11 from previous conv layer
             MaxPoolingLayer(filter_size=2, stride=2),
+            # shape out: b, 8, 5, 5 reduced by factor of 2 again (integer division)
 
             # flatten to prepare for dense layer
             FlattenLayer(),
 
             # to find fc in_features, look at most recent conv2d's out channels,
-            # and dimension max pool has reduced down to (28 / 2 / 2) = 7
+            # and dimension of feature maps that conv and pool layers have reduced the original dimensions from
             DenseLayer(in_features=16 * 5 * 5, out_features=256), # funnel down to fewer neurons before going straight to num_classes
 
             ReLULayer(),
@@ -468,9 +482,13 @@ class CNN:
         Returns:
         - x (ndarray): The final output after passing through all layers.
         """
-
+        #print("FORWARD")
         for layer in self.layers:
+            #layer_name = layer.__class__.__name__
+            #print(f"{layer_name} input shape: {x.shape}")
             x = layer.forward(x)
+            #print(f"{layer_name} output shape: {x.shape}")
+
         return x
 
     def backward(self, d_out):
@@ -483,8 +501,13 @@ class CNN:
         Returns:
         - Gradients are computed and stored in the layers for parameter updates.
         """
+        #print("BACKWARD")
+
         for layer in reversed(self.layers):
+            #layer_name = layer.__class__.__name__
+            #print(layer_name, f"before: grad out type: {type(d_out)}")
             d_out = layer.backward(d_out)
+            #print(layer_name, f"after: grad out type: {type(d_out)}")
 
     def train(self, x_train, y_train, epochs, lr):
         """"
@@ -499,8 +522,8 @@ class CNN:
         num_train_samples = len(x_train)
         for epoch in range(epochs):
             epoch_loss = 0.
-            with tqdm(total=len(x_train), desc=f"Epoch {epoch + 1}/{epochs}", dynamic_ncols=True) as progress_bar:
-                for i in range(len(x_train)):
+            with tqdm(total=num_train_samples, desc=f"Epoch {epoch + 1}/{epochs}", dynamic_ncols=True) as progress_bar:
+                for i in range(num_train_samples):
                     # this index method ensures sample remains 2D instead of being flattened
                     x_sample = x_train[i:i+1]  # Single image
                     y_label = y_train[i:i+1]  # Single label (one-hot)
