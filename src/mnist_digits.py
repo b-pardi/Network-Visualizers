@@ -3,13 +3,14 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 import pickle as pkl
 
-from utils.data import download_mnist, load_mnist, onehot_encode
+from utils.data import download_mnist, load_mnist, onehot_encode, stratified_split
 from utils.normalize import constant_norm
 from utils.activations import ReLULayer, SoftmaxLayer
 from utils.interfaces import Layer, LearnableLayer
 from utils.initializers import xavier_glorot_normal_init
 from utils.errs import cce_loss, cce_loss_gradient
 from utils.optimizers import AdamOptimizer
+from utils.metrics import accuracy_score, precision_score, f1_score
 
     
 class Conv2D(LearnableLayer):
@@ -515,7 +516,11 @@ class CNN:
             self,
             x_train,
             y_train,
+            x_val,
+            y_val,
+            validation_subset_size,
             epochs,
+            patience,
             batch_size,
             optimizer
         ):
@@ -525,10 +530,11 @@ class CNN:
         Args:
         - x_train, y_train: Training data and labels
         - x_val, y_val: Validation data and labels for early stopping
+        - validation_subset_size: Number of validation samples to use each epoch
         - epochs: Number of training epochs
+        - patience: Number of epochs to wait for improvement before stopping early
         - batch_size: Batch size for mini-batch gradient descent
         - optimizer: AdamOptimizer instance
-        - patience: Number of epochs to wait for improvement before stopping early
         """
         num_train_samples = len(x_train)
         num_batches = num_train_samples // batch_size
@@ -546,7 +552,9 @@ class CNN:
             y_train = y_train[permutation]
 
             epoch_loss = 0.
-            with tqdm(total=num_batches, desc=f"Epoch {epoch + 1}/{epochs}", dynamic_ncols=True) as progress_bar:
+            total_train_acc, total_train_prec, total_train_f1 = 0, 0, 0  # Initialize cumulative metrics
+
+            with tqdm(total=num_batches, desc=f"Epoch {epoch + 1}/{epochs} [TRAINING]", dynamic_ncols=True) as train_bar:
                 for i in range(0, num_train_samples, batch_size):
                     # find index of batch end while preventing i from reaching outside of all train samples
                     batch_end_idx = min(i+batch_size, num_train_samples)
@@ -568,10 +576,69 @@ class CNN:
                     # still updates the weights and biases, just more effectively
                     optimizer.update()
 
+                    # training metrics
+                    y_pred = np.argmax(probs, axis=1)
+                    y_true = np.argmax(y_batch, axis=1)
+                    total_train_acc += accuracy_score(y_true, y_pred)
+                    total_train_prec += precision_score(y_true, y_pred)
+                    total_train_f1 += f1_score(y_true, y_pred)
+
                     # Update the progress bar and show the average loss per sample
-                    avg_loss = epoch_loss / (batch_end_idx)  # Calculate the average loss so far
-                    progress_bar.set_postfix({'loss': avg_loss})  # Display the loss in the progress bar
-                    progress_bar.update(1)  # Increment the progress bar by 1
+                    batches_processed = i // batch_size + 1
+                    train_bar.set_postfix({
+                        'loss': epoch_loss / batches_processed,
+                        'accuracy': total_train_acc / batches_processed,
+                        'precision': total_train_prec / batches_processed,
+                        'f1': total_train_f1 / batches_processed
+                    })  # Display metrics in the progress bar
+                    train_bar.update(1)  # Increment the progress bar by 1
+
+            # validation phase using random smaller subset of validation dataset
+            val_acc, val_prec, val_f1 = 0, 0, 0
+            val_loss = 0.
+            val_indices = np.random.choice(len(x_val), min(validation_subset_size, len(x_val)), replace=False)
+            x_val_subset = x_val[val_indices]
+            y_val_subset = y_val[val_indices]
+
+            # validation progress bar
+            with tqdm(total=validation_subset_size // batch_size, desc=f"Epoch {epoch+1}/{epochs} [VALIDATION]", dynamic_ncols=True) as val_bar:
+                for i in range(0, validation_subset_size, batch_size):
+                    # batch dataset
+                    batch_end_idx = min(i+batch_size, validation_subset_size)
+                    x_batch_val = x_val_subset[i:batch_end_idx]
+                    y_batch_val = y_val_subset[i:batch_end_idx]
+
+                    # forward pass on validation data
+                    val_probs = self.forward(x_batch_val)
+                    val_loss += cce_loss(val_probs, y_batch_val)
+
+                    # validation metrics
+                    y_pred_val = np.argmax(val_probs, axis=1)
+                    y_true_val = np.argmax(y_batch_val, axis=1)
+                    val_acc += accuracy_score(y_true_val, y_pred_val)
+                    val_prec += precision_score(y_true_val, y_pred_val, average='macro')
+                    val_f1 += f1_score(y_true_val, y_pred_val, average='macro')
+
+                    # validation progress bar with loss and metrics
+                    val_batches_processed = (i // batch_size + 1)
+                    val_bar.set_postfix({
+                        'loss': val_loss / val_batches_processed,
+                        'accuracy': val_acc / val_batches_processed,
+                        'precision': val_prec / val_batches_processed,
+                        'f1': val_f1 / val_batches_processed
+                    })
+                    val_bar.update(1)
+
+            # early stopping check
+            avg_val_loss = val_loss / validation_subset_size
+            if avg_val_loss < best_val_loss:
+                best_val_loss = avg_val_loss
+                patience_counter = 0
+            else:
+                patience_counter += 1
+                if patience_counter >= patience:
+                    print(f"Early Stopping Triggered at Epoch: {epoch+1} after {patience_counter} epochs with no improvement")
+                    print(f"Validation Loss at stopping: {avg_val_loss}, Best Validation Loss: {best_val_loss}")
 
     def predict(self, x):
         """
@@ -627,6 +694,10 @@ def run_mnist():
 
     # one hot encode labels
     y_train = onehot_encode(y_train, num_classes=10)
+    y_test = onehot_encode(y_test, num_classes=10)
+
+    # split train data into 10% test, ensuring equal samples of all classes represented, but still shuffled
+    x_train, y_train, x_val, y_val = stratified_split(x_train, y_train, val_size=0.1, num_classes=10, random_state=123)
 
     # optimizer object
     optim = AdamOptimizer(
@@ -641,10 +712,13 @@ def run_mnist():
     cnn.train(
         x_train,
         y_train,
+        x_val,
+        y_val,
+        validation_subset_size=1000,
         epochs=10,
+        patience=3,
         batch_size=32,
         optimizer=optim
     )
-
     
     cnn.save_model("models/mnist_cnn.pkl")

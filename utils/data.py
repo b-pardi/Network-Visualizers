@@ -19,6 +19,63 @@ def onehot_encode(labels, num_classes):
     one_hot[np.arange(labels.size), labels] = 1
     return one_hot
 
+def stratified_split(x_train, y_train, val_size=0.1, num_classes=10, random_state=42):
+    """
+    Splits x_train and y_train into training and validation sets using stratified sampling.
+
+    Args:
+    - x_train (np.ndarray): Input features for training.
+    - y_train (np.ndarray): One-hot encoded labels for training.
+    - val_size (float): Proportion of the training set to be used for validation (e.g., 0.1 for 10%).
+    - num_classes (int): Number of classes (default 10 for MNIST).
+    - random_state (int): Seed for reproducibility.
+
+    Returns:
+    - x_train_strat: Stratified training set after splitting.
+    - y_train_strat: Stratified training labels after splitting.
+    - x_val_strat: Stratified validation set.
+    - y_val_strat: Stratified validation labels.
+    """
+    np.random.seed(random_state)
+    y_train_labels = np.argmax(y_train, axis=1)
+
+    # Initialize arrays for final splits
+    x_train_strat = np.empty((0, *x_train.shape[1:]), dtype=x_train.dtype)
+    y_train_strat = np.empty((0, y_train.shape[1]), dtype=y_train.dtype)
+    x_val_strat = np.empty((0, *x_train.shape[1:]), dtype=x_train.dtype)
+    y_val_strat = np.empty((0, y_train.shape[1]), dtype=y_train.dtype)
+
+    # grab data from each class and split them evenly
+    for i in range(num_classes):
+        # find indices for current class and shuffle them
+        class_idxs = np.where(y_train_labels == i)[0]
+        np.random.shuffle(class_idxs)
+
+        # determine size of val set based on val_size ratio argument
+        val_count = int(len(class_idxs) * val_size)
+
+        # split data into training and val sets
+        val_idxs = class_idxs[:val_count]
+        train_idxs = class_idxs[val_count:]
+
+        # append data
+        x_train_strat = np.vstack((x_train_strat, x_train[train_idxs]))
+        y_train_strat = np.vstack((y_train_strat, y_train[train_idxs]))
+        x_val_strat = np.vstack((x_val_strat, x_train[val_idxs]))
+        y_val_strat = np.vstack((y_val_strat, y_train[val_idxs]))
+
+    # shuffle the stratified training and validation sets to randomize order
+    train_shuffle_indices = np.random.permutation(x_train_strat.shape[0])
+    val_shuffle_indices = np.random.permutation(x_val_strat.shape[0])
+
+    x_train_strat = x_train_strat[train_shuffle_indices]
+    y_train_strat = y_train_strat[train_shuffle_indices]
+    x_val_strat = x_val_strat[val_shuffle_indices]
+    y_val_strat = y_val_strat[val_shuffle_indices]
+
+    return x_train_strat, y_train_strat, x_val_strat, y_val_strat
+
+
 def compute_md5_checksum(fp):
     md5_hash = hashlib.md5() # md5 hash object
     with open(fp, 'rb') as f:

@@ -123,11 +123,11 @@ Here is a list of steps I outlined for this part of project, and the status of t
 - [x] implement CNN class training loop and layer formation
 - [x] save resulting model
 - [x] report more metrics while training and post training
-- [ ] tests for parent cnn class functionality
-- [ ] add validation to training loop
-- [ ] batch images instead of updating weights on all
-- [ ] stochastic gradient descent instead of full GD
-- [ ] implement the adam optimizer (or similar)
+- [x] add validation to training loop
+- [x] batch images instead of updating weights on all
+- [x] stochastic gradient descent instead of full GD
+- [x] implement the adam optimizer (or similar)
+- [x] stratified splitting of train/validation data
 - [ ] scale images down to 10 x 10
 - [ ] other optimizations/simplifications?
 - [ ] setup pygame visuals backend
