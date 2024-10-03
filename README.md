@@ -131,6 +131,7 @@ Here is a list of steps I outlined for this part of project, and the status of t
 - [ ] scale images down to 10 x 10
 - [ ] other optimizations/simplifications?
 - [ ] setup pygame visuals backend
+- [ ] visualize optimizer (what the lr is set to currently)
 - [ ] filter pass live visual for sample image in training with weight and pixel values on top of filter/image
 - [ ] live confusion matrix on validation images
 - [ ] loop that shows images in dataset and heatmap of neurons' activations in all layers showing connections to which neurons are determining outputs for each image (can be done on trained model or validation images)
