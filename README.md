@@ -106,8 +106,11 @@ We can see how 3 hidden neurons gives a 3D feature space below
 
 ![Input space vs 3D feature space](imgs/xor_problem/xor_5.png)
 
-**Architecture**
+
 Now that we have a conceptual understanding, let's now dive into the math behind this to build the bridge between theory and application.
+
+**Architecture**
+
 Our neural network has the following structure:
 
 - Input Layer: 2 neurons (for inputs $x_1$ and $x_2$)
@@ -116,7 +119,9 @@ Our neural network has the following structure:
 
 This architecture allows the network to capture the non-linear relationships inherent in the XOR problem.
 
+
 **Activation**
+
 Activation functions introduce non-linearity into the network, enabling it to learn complex patterns by 'activating' the neurons in both the hidden and output layers.
 A commonly used activation function for neural networks is the **Sigmoid function**
 
@@ -124,7 +129,9 @@ $$
 \sigma(z) = \frac{1}{1 + e^{-z}}
 $$
 
+
 **Forward Propagation**
+
 Forward propagation is the process of calculating the output of the neural network given the inputs. It involves computing the activations of each neuron layer by layer.
 For each hidden neuron $h_j$ where j is an index of a hidden neuron, we take the weighted sum of its inputs, which are initialized randomly as small numbers (between 0 and 1) for simplicity.
 The weighted sum is as follows:
@@ -156,7 +163,9 @@ $$
 \hat{y} = \sigma\left( z^{(2)} \right)
 $$
 
+
 **Cost Function / Error**
+
 The cost function quantifies the error between the network's predictions and the actual outputs. We use the Mean Squared Error (MSE):
 
 $$
@@ -165,8 +174,11 @@ $$
 
 Where $y$ is the actual output (aka ground truth) and $\hat{y}$ is the predicted value
 
+
 **Backward Propagation**
+
 Backward propagation calculates the gradients of the cost function with respect to each weight and bias, allowing us to individually update them in a way that minimizes the cost.
+
 
 1. Output Layer Gradient
 The output neuron gradient quantifies how far off out predicted output is from the actual output
@@ -175,7 +187,7 @@ $$
 \delta^{(2)} = (\hat{y} - y) \cdot \sigma'\left( z^{(2)} \right)
 $$
 
-Where $\sigma'\left( z^{(2)} \right)$ is the derivative of the sigmoid function evaluated at $z^{(2)} \right$ given as:
+Where $\sigma'\left( z^{(2)} \right)$ is the derivative of the sigmoid function evaluated at $z^{(2)}$ given as:
 
 $$
 \sigma'(z) = \sigma(z) (1 - \sigma(z))
@@ -187,6 +199,7 @@ $$
 \frac{\partial J}{\partial w_j^{(2)}} = \delta^{(2)} \cdot a_j^{(1)}
 \frac{\partial J}{\partial b^{(2)}} = \delta^{(2)}
 $$
+
 
 2. Hidden Layer Error
 The error term for each hidden neuron $h_j$ is influenced by the errors in the subsequent layer:
@@ -201,6 +214,7 @@ $$
 \frac{\partial J}{\partial w_{ji}^{(1)}} = \delta_j^{(1)} \cdot x_i
 \frac{\partial J}{\partial b_j^{(1)}} = \delta_j^{(1)}
 $$
+
 
 3. Parameter Updates
 With the gradients calculated, we use Gradient Descent to update the parameters of our network. This is best thought of as takking a small step down towards a minimum in the gradient. Keep in mind these gradients generate a sort of wavy surface, where we want to be as low as possible in. The lower we are in this gradient, the less error we have.
