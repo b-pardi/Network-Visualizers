@@ -39,10 +39,9 @@ The script accepts several command-line arguments to control the visualization a
 
 - `--xor`: Run the XOR classifier
     - `-hn`, `--hidden_neurons`: Number of neurons in the hidden layer (default is 3)
+    - `-ner`, `--num_epochs_refresh_visualizer`: Number of epochs per refreshing of visualizers (affects the speed of training; default is 100 for xor)
     
 - `-md`, `--mnist_digits`: Run the MNIST digit classifier (planned implementation)
-
-- `-ner`, `--num_epochs_refresh_visualizer`: Number of epochs per refreshing of visualizers (affects the speed of training; default is 100 for xor)
 
 - `e`, `--epochs`: Number of epochs to train selected model
 
@@ -57,15 +56,18 @@ To run the XOR neural network with a custom number of hidden neurons, epochs, an
 **Note** It is most useful to run the XOR network with 2 or 3 hidden neurons, as those allow you to see the feature space mapping of the input points. Beyond 3 dimensions it is not feasible for us to visualize, so the feature space plot is omitted. However the network will still run and train with other plots showing.
 
 ## Currently Implemented Network Backgrounds:
-### XOR (Exclusive OR) Problem Neural Net
+### XOR (Exclusive OR) Problem Neural Network Deep Dive
 
-[![Watch the video](https://i.ytimg.com/an_webp/zGUs17-CcHU/mqdefault_6s.webp?du=3000&sqp=COu19rcG&rs=AOn4CLBoHwnXLcO_-m3tZHgThDoMYdP_UQ)](https://www.youtube.com/watch?v=zGUs17-CcHU)
+[![Demonstration Video](https://img.youtube.com/vi/zGUs17-CcHU/maxresdefault.jpg)](https://www.youtube.com/watch?v=zGUs17-CcHU)
 
 
 Simple neural network with 3 layers (1 input, 1 hidden, 1 output) to solve the XOR gate problem.
 The XOR problem is a fundamental in machine learning, introducing the concept non linearly separable classification
 
-XOR takes two binary inputs and outputs a single binary output as shown in the following truth table:
+**A Brief Overview of Neural Networks Before We Begin**
+A neural network is a computational model inspired by the human brain's structure. It consists of layers of interconnected neurons (also called nodes), where each neuron processes input data and passes the result to the next layer. The network learns by adjusting the weights and biases associated with these connections to minimize the difference between its predictions and the actual outputs.
+
+An XOR logic gate takes two binary inputs and outputs a single binary output as shown in the following truth table:
 ```
     a   |   b   |   y
 -------------------------
@@ -103,6 +105,139 @@ If we used 3 hidden neurons, we'd be transforming the points into 3D and find a 
 We can see how 3 hidden neurons gives a 3D feature space below
 
 ![Input space vs 3D feature space](imgs/xor_problem/xor_5.png)
+
+**Architecture**
+Now that we have a conceptual understanding, let's now dive into the math behind this to build the bridge between theory and application.
+Our neural network has the following structure:
+
+- Input Layer: 2 neurons (for inputs $x_1$ and $x_2$)
+- Hidden Layer: $n$ neurons (we'll use 3 for demonstration purposes)
+- Output Layer: 1 neuron (for the predicted output $\hat{y}$)
+
+This architecture allows the network to capture the non-linear relationships inherent in the XOR problem.
+
+**Activation**
+Activation functions introduce non-linearity into the network, enabling it to learn complex patterns by 'activating' the neurons in both the hidden and output layers.
+A commonly used activation function for neural networks is the **Sigmoid function**
+
+$$
+\sigma(z) = \frac{1}{1 + e^{-z}}
+$$
+
+**Forward Propagation**
+Forward propagation is the process of calculating the output of the neural network given the inputs. It involves computing the activations of each neuron layer by layer.
+For each hidden neuron $h_j$ where j is an index of a hidden neuron, we take the weighted sum of its inputs, which are initialized randomly as small numbers (between 0 and 1) for simplicity.
+The weighted sum is as follows:
+
+$$
+z_j^{(1)} = w_{j1}^{(1)} x_1 + w_{j2}^{(1)} x_2 + w_{j3}^{(1)} x_3 + b_j^{(1)}
+$$
+
+Where:
+- $w_{j1}^{(1)}$ is the weight from the input neuron $i$ to hidden neuron $j$
+- $b_j^{(1)}$ is the bias term for hidden neuron $j$
+- The $1$ superscript is the index of the layer (0 is input, 1 is hidden, 2 is output)
+
+This weighted sum is then passed through the sigmoid activation given above:
+
+$$
+a_j^{(1)} = \sigma\left( z_j^{(1)} \right)
+$$
+
+From here we have each neuron's activation value. These activated neurons then have a weighted sum again to feed to the output neuron (layer index of 2)
+
+$$
+z^{(2)} = \sum_{j=1}^{n=3} w_j^{(2)} a_j^{(1)} + b^{(2)}
+$$
+
+And once again this weighted sum is then activated to give us a final output prediction value, which ideally is close to 1 or 0 (True or False)
+
+$$
+\hat{y} = \sigma\left( z^{(2)} \right)
+$$
+
+**Cost Function / Error**
+The cost function quantifies the error between the network's predictions and the actual outputs. We use the Mean Squared Error (MSE):
+
+$$
+J = \frac{1}{2} (\hat{y} - y)^2
+$$
+
+Where $y$ is the actual output (aka ground truth) and $\hat{y}$ is the predicted value
+
+**Backward Propagation**
+Backward propagation calculates the gradients of the cost function with respect to each weight and bias, allowing us to individually update them in a way that minimizes the cost.
+
+1. Output Layer Gradient
+The output neuron gradient quantifies how far off out predicted output is from the actual output
+
+$$
+\delta^{(2)} = (\hat{y} - y) \cdot \sigma'\left( z^{(2)} \right)
+$$
+
+Where $\sigma'\left( z^{(2)} \right)$ is the derivative of the sigmoid function evaluated at $z^{(2)} \right$ given as:
+
+$$
+\sigma'(z) = \sigma(z) (1 - \sigma(z))
+$$
+
+Now with the error we can find the gradient of the output layer. The gradient of the cost function w.r.t the output weight $w_j^{(2)}$ and bias $b^{(2)}$ is as follows:
+
+$$
+\frac{\partial J}{\partial w_j^{(2)}} = \delta^{(2)} \cdot a_j^{(1)}
+\frac{\partial J}{\partial b^{(2)}} = \delta^{(2)}
+$$
+
+2. Hidden Layer Error
+The error term for each hidden neuron $h_j$ is influenced by the errors in the subsequent layer:
+
+$$
+\delta_j^{(1)} = \delta^{(2)} \cdot w_j^{(2)} \cdot \sigma'\left( z_j^{(1)} \right)
+$$
+
+And again let's find the gradient of now the hidden layer weights and biases similarly to how we did for the ouput layer.
+
+$$
+\frac{\partial J}{\partial w_{ji}^{(1)}} = \delta_j^{(1)} \cdot x_i
+\frac{\partial J}{\partial b_j^{(1)}} = \delta_j^{(1)}
+$$
+
+3. Parameter Updates
+With the gradients calculated, we use Gradient Descent to update the parameters of our network. This is best thought of as takking a small step down towards a minimum in the gradient. Keep in mind these gradients generate a sort of wavy surface, where we want to be as low as possible in. The lower we are in this gradient, the less error we have.
+
+$$
+\theta \leftarrow \theta - \eta \frac{\partial J}{\partial \theta}
+$$
+
+Where $\theta$ represents some weight or bias in the network, and $\eta$ is the learning rate, which controls how big of a step we take
+
+More explicitly:
+
+$$
+w_j^{(2)} \leftarrow w_j^{(2)} - \eta \frac{\partial J}{\partial w_j^{(2)}}
+$$
+
+The same process follows for the bias:
+
+$$
+b^{(2)} \leftarrow b^{(2)} - \eta \frac{\partial J}{\partial b^{(2)}}
+$$
+
+We then repeat this step for the hidden neurons as well:
+
+$$
+w_{ji}^{(1)} \leftarrow w_{ji}^{(1)} - \eta \frac{\partial J}{\partial w_{ji}^{(1)}}
+b_j^{(1)} \leftarrow b_j^{(1)} - \eta \frac{\partial J}{\partial b_j^{(1)}}
+$$
+
+By integrating these mathematical principles into our code, we create a neural network that effectively learns to solve the XOR problem. Understanding the math behind the network not only demystifies how neural networks function but also empowers you to modify and extend the network for more complex tasks.
+
+**Key Takeaways**
+- Learning: The network learns by adjusting weights and biases to minimize the cost function.
+- Error Signals: Errors are propagated backward to update parameters in earlier layers.
+- Non-Linear Transformation: Hidden layers transform inputs into a space where linear separation is possible.
+- Optimization: Gradient descent is used to find the set of parameters that minimize the cost.
+
 
 ---
 
