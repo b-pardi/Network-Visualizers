@@ -212,6 +212,11 @@ And again let's find the gradient of now the hidden layer weights and biases sim
 
 $$
 \frac{\partial J}{\partial w_{ji}^{(1)}} = \delta_j^{(1)} \cdot x_i
+$$
+
+and
+
+$$
 \frac{\partial J}{\partial b_j^{(1)}} = \delta_j^{(1)}
 $$
 
@@ -241,6 +246,11 @@ We then repeat this step for the hidden neurons as well:
 
 $$
 w_{ji}^{(1)} \leftarrow w_{ji}^{(1)} - \eta \frac{\partial J}{\partial w_{ji}^{(1)}}
+$$
+
+and
+
+$$
 b_j^{(1)} \leftarrow b_j^{(1)} - \eta \frac{\partial J}{\partial b_j^{(1)}}
 $$
 
