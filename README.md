@@ -196,7 +196,10 @@ $$
 Now with the error we can find the gradient of the output layer. The gradient of the cost function w.r.t the output weight $w_j^{(2)}$ and bias $b^{(2)}$ is as follows:
 
 $$
-\frac{\partial J}{\partial w_j^{(2)}} = \delta^{(2)} \cdot a_j^{(1)} \newline
+\frac{\partial J}{\partial w_j^{(2)}} = \delta^{(2)} \cdot a_j^{(1)}
+$$
+
+$$
 \frac{\partial J}{\partial b^{(2)}} = \delta^{(2)}
 $$
 
@@ -211,7 +214,10 @@ $$
 And again let's find the gradient of now the hidden layer weights and biases similarly to how we did for the ouput layer.
 
 $$
-\frac{\partial J}{\partial w_{ji}^{(1)}} = \delta_j^{(1)} \cdot x_i \newline
+\frac{\partial J}{\partial w_{ji}^{(1)}} = \delta_j^{(1)} \cdot x_i 
+$$
+
+$$
 \frac{\partial J}{\partial b_j^{(1)}} = \delta_j^{(1)}
 $$
 
@@ -240,7 +246,10 @@ $$
 We then repeat this step for the hidden neurons as well:
 
 $$
-w_{ji}^{(1)} \leftarrow w_{ji}^{(1)} - \eta \frac{\partial J}{\partial w_{ji}^{(1)}} \newline
+w_{ji}^{(1)} \leftarrow w_{ji}^{(1)} - \eta \frac{\partial J}{\partial w_{ji}^{(1)}} 
+$$
+
+$$
 b_j^{(1)} \leftarrow b_j^{(1)} - \eta \frac{\partial J}{\partial b_j^{(1)}}
 $$
 
