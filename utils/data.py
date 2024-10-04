@@ -105,6 +105,35 @@ def select_fraction_of_data(x_data, y_data, num_classes, fraction=1.0):
 
     return x_data[selected_idxs], y_data[selected_idxs]
 
+def downsample_square_images(x_data, target_size):
+    """
+    Downsamples the square image dataset to a specified size
+    
+    Parameters:
+        x_data (np.ndarray): The original image dataset of shape (N, H, W) or (N, 1, H, W).
+        target_size (int): The target size to downsample to (height and width will be equal).
+    
+    Returns:
+        np.ndarray: The downsampled square image dataset.
+    """
+    # if images are in batch format (N, 1, S, S) format, reshape them to (N, S, S)
+    reshaped = False
+    if len(x_data.shape) == 4 and x_data.shape[1] == 1:
+        reshaped = True
+        x_data = x_data.reshape(-1, x_data.shape[2], x_data.shape[3])
+
+    # scaling factor for how much to reduce images by
+    factor = x_data.shape[1] // target_size
+
+    # reshape and average pixel chunks
+    x_downsampled = x_data.reshape(-1, target_size, factor, target_size, factor).mean(axis=(2, 4))
+    
+    # reshape back to batch format
+    if reshaped:
+        x_downsampled = x_downsampled.reshape(-1, 1, target_size, target_size)
+
+    return x_downsampled
+
 def compute_md5_checksum(fp):
     md5_hash = hashlib.md5() # md5 hash object
     with open(fp, 'rb') as f:

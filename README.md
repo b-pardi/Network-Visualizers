@@ -286,8 +286,11 @@ Here is a list of steps I outlined for this part of project, and the status of t
 - [x] stochastic gradient descent instead of full GD
 - [x] implement the adam optimizer (or similar)
 - [x] stratified splitting of train/validation data
-- [ ] scale images down to 10 x 10
-- [ ] other optimizations/simplifications?
+- [x] option to scale images down
+- [x] option to reduce dataset size
+- [x] config file for data loading and processing
+- [x] config file for network parameters
+- [x] ability to assemble network with config file (layer parameters that typically require manual calculation based on input size and tunable parameters are now automatically calculated)
 - [ ] setup pygame visuals backend
 - [ ] visualize optimizer (what the lr is set to currently)
 - [ ] filter pass live visual for sample image in training with weight and pixel values on top of filter/image

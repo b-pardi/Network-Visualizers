@@ -2,8 +2,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 import pickle as pkl
+import json
 
-from utils.data import download_mnist, load_mnist, onehot_encode, stratified_split, select_fraction_of_data
+from utils.data import download_mnist, load_mnist, onehot_encode, stratified_split, select_fraction_of_data, downsample_square_images
 from utils.normalize import constant_norm
 from utils.activations import ReLULayer, SoftmaxLayer
 from utils.interfaces import Layer, LearnableLayer
@@ -430,51 +431,98 @@ class CNN:
     This CNN consists of Conv2D, ReLU, MaxPooling, Flatten, and Dense layers,
     with a final softmax activation layer to classify
 
-    for comments below describing size, b refers to batch size, and initial image size is based on 28x28 mnist images
+    network is assembled based on the "config/cnn_params.json" file
     """
-    def __init__(self, num_classes):
+    def __init__(self, params):
+        num_classes = params["num_classes"]
+        input_size = params["input_size"]
+        in_channels = params["in_channels"]
+        layer_assembly = params["layers"]
+
         # network initialized as list of layers
-        self.layers = [
-            # first layer 2D convolution, 1 in channel for grayscale, 8 out channels for 8 filters, 3x3 filter
-            # shape in: b, 1, 28, 28
-            Conv2D(in_channels=1, out_channels=8, filter_size=3, stride=1),
-            # shape out: b, 8, 26, 26; with stride of 1, dims reduced by filter_size - 1, and 8 filters applied
+        self.layers = []
 
-            # activate filter weights
-            ReLULayer(), # does not effect dimensions
+        # flag used to indicate to dense layers that the data was just flattened
+        # if it was just flattened additional calculations must be made to determine in_features
+        # else there will be out_features from the previous dense layer ready to use as in_feature for this one
+        just_flattened = False
+        running_in_features = None
+        
+        running_in_size = input_size
+        running_in_channels = in_channels
 
-            # reduce image dimensionality keeping only important parts with max pooling
-            # shape in: b, 8, 26, 26 from prev conv2d layer
-            MaxPoolingLayer(filter_size=2, stride=2),
-            # shape out: b, 8, 13, 13 dims reduce by factor of (2-1) // 2 + 1 = 2
+        # loop through layer assembly and and assemble network according to it
+        for layer in layer_assembly:
+            if layer['type'] == 'conv':
+                # Add Conv2D layer
+                self.layers.append(Conv2D(
+                    in_channels=running_in_channels,
+                    out_channels=layer['out_channels'],
+                    filter_size=layer['filter_size'],
+                    stride=layer['stride'],
+                    pad=layer['padding']
+                ))
+                
+                # Calculate the new output size after the convolution
+                running_in_size = self.calculate_output_size(running_in_size, layer['filter_size'], layer['stride'], layer['padding'])
+                running_in_channels = layer['out_channels']  # Update the in_channels for the next layer
+                
+            if layer['type'] == 'maxpool':
+                # Add MaxPoolingLayer
+                self.layers.append(MaxPoolingLayer(
+                    filter_size=layer['filter_size'],
+                    stride=layer['stride'],
+                ))
 
-            # second layer 2D convolution, 8 in channels from previous conv out, 16 out channels for 16 new filters
-            # shape in: b, 8, 13, 13 from previous pooling layer
-            Conv2D(in_channels=8, out_channels=16, filter_size=3, stride=1),
-            # shape out: b, 16, 11, 11 dims reduce by 2, 16 filters used in this conv layer
+                # Calculate the new output size after pooling
+                running_in_size = self.calculate_output_size(running_in_size, layer['filter_size'], layer['stride'])
+                
+            if layer['type'] == 'relu':
+                self.layers.append(ReLULayer()) # dims unaffected by relu
 
-            # activate filter weights
-            ReLULayer(), # dims unaffected by relu
+            if layer['type'] == 'flatten':
+                self.layers.append(FlattenLayer())
+                just_flattened = True # let dense layer know that it is receiving a flattened layer and to make appropriate calculations
 
-            # pooling again
-            # shape in: b, 8, 11, 11 from previous conv layer
-            MaxPoolingLayer(filter_size=2, stride=2),
-            # shape out: b, 8, 5, 5 reduced by factor of 2 again (integer division)
+            if layer['type'] == 'dense':
+                if just_flattened:
+                    # the first dense layer takes in the flatten layer
+                    # meaning there is a feature map of (running_in_size x running_in_size) for each running_channel
+                    # that corresponding number of in_features is calculated here
+                    in_features = running_in_channels * running_in_size * running_in_size
+                    just_flattened = False
+                else:
+                    # if not just flattened, the previous dense layer gave us out features to use
+                    in_features = running_in_features
 
-            # flatten to prepare for dense layer
-            FlattenLayer(),
+                # Add DenseLayer
+                self.layers.append(DenseLayer(
+                    in_features=in_features,
+                    out_features=layer['out_features']
+                ))
 
-            # to find fc in_features, look at most recent conv2d's out channels,
-            # and dimension of feature maps that conv and pool layers have reduced the original dimensions from
-            DenseLayer(in_features=16 * 5 * 5, out_features=256), # funnel down to fewer neurons before going straight to num_classes
+                # Update running_in_features for the next dense layer
+                running_in_features = layer['out_features']
 
-            ReLULayer(),
-            
-            DenseLayer(in_features=256, out_features=num_classes),
+            if layer['type'] == 'softmax':
+                self.layers.append(SoftmaxLayer())
 
-            SoftmaxLayer()
-        ]
-    
+    @staticmethod   
+    def calculate_output_size(input_size, filter_size, stride, padding=0):
+        """
+        Calculate the output dimension after a convolution or pooling layer.
+        
+        Parameters:
+            input_size (int): The height/width of the input (assuming square images).
+            filter_size (int): The size of the filter (kernel size).
+            stride (int): The stride of the filter.
+            padding (int): The number of pixels to pad on each side of the input (default is 0).
+        
+        Returns:
+            int: The output size (height/width) after applying the layer.
+        """
+        return (input_size - filter_size + 2 * padding) // stride + 1
+        
     def forward(self, x):
         """
         Forward Pass: propogate through layers and call each layer's forward function
@@ -518,7 +566,7 @@ class CNN:
             y_train,
             x_val,
             y_val,
-            validation_subset_size,
+            validation_subset_ratio,
             epochs,
             patience,
             batch_size,
@@ -596,6 +644,7 @@ class CNN:
             # validation phase using random smaller subset of validation dataset
             val_acc, val_prec, val_f1 = 0, 0, 0
             val_loss = 0.
+            validation_subset_size = int(validation_subset_ratio * len(x_val))
             val_indices = np.random.choice(len(x_val), min(validation_subset_size, len(x_val)), replace=False)
             x_val_subset = x_val[val_indices]
             y_val_subset = y_val[val_indices]
@@ -616,8 +665,8 @@ class CNN:
                     y_pred_val = np.argmax(val_probs, axis=1)
                     y_true_val = np.argmax(y_batch_val, axis=1)
                     val_acc += accuracy_score(y_true_val, y_pred_val)
-                    val_prec += precision_score(y_true_val, y_pred_val, average='macro')
-                    val_f1 += f1_score(y_true_val, y_pred_val, average='macro')
+                    val_prec += precision_score(y_true_val, y_pred_val)
+                    val_f1 += f1_score(y_true_val, y_pred_val)
 
                     # validation progress bar with loss and metrics
                     val_batches_processed = (i // batch_size + 1)
@@ -639,6 +688,7 @@ class CNN:
                 if patience_counter >= patience:
                     print(f"Early Stopping Triggered at Epoch: {epoch+1} after {patience_counter} epochs with no improvement")
                     print(f"Validation Loss at stopping: {avg_val_loss}, Best Validation Loss: {best_val_loss}")
+                    break
 
     def predict(self, x):
         """
@@ -676,32 +726,46 @@ def run_mnist():
         'test_labels': 'ec29112dd5afa0611ce80d1b7f02629c'
     }
 
+    # load the parameters for the CNN
+    with open("config/cnn_params.json", 'r') as config_file:
+        cnn_params = json.load(config_file)
+
     data_dir_dict = download_mnist("res/mnist_data/")
     x_train, y_train, x_test, y_test = load_mnist(data_dir_dict, mnist_md5_dict)
 
-    print(x_train.shape, y_train.shape)
-    x_train, y_train = select_fraction_of_data(x_train, y_train, 10, fraction=0.2)
-    print(x_train.shape, y_train.shape)
+    print(f"Initial Dataset Shapes: x_train: {x_train.shape}, y_train: {y_train.shape}, x_test: {x_test.shape}, y_test: {y_test.shape}")
+
+    # grab a smaller portion of dataset, all 60k images are overkill for this project's purpose
+    x_train, y_train = select_fraction_of_data(x_train, y_train, 10, fraction=cnn_params['percent_of_train_data_to_use'])
+    x_test, y_test = select_fraction_of_data(x_test, y_test, 10, fraction=cnn_params['percent_of_train_data_to_use'])
+
+    # downsample images for same reason as above
+    x_train = downsample_square_images(x_train, cnn_params['input_size'])
+    x_test = downsample_square_images(x_test, cnn_params['input_size'])
 
     # verify images loaded correct plotting a random one
     random_train_idx = np.random.randint(0, len(x_train))
     random_test_idx = np.random.randint(0, len(x_test))
-    plot_mnist_digit(x_train[random_train_idx], y_train[random_train_idx], x_test[random_test_idx], y_test[random_test_idx])
+    #plot_mnist_digit(x_train[random_train_idx], y_train[random_train_idx], x_test[random_test_idx], y_test[random_test_idx])
 
     # normalize pixels values to be between 0 and 1
     x_train = constant_norm(x_train, c=255.0)
     x_test = constant_norm(x_test, c=255.0)
 
     # reshape to have batch sizes
-    x_train = x_train.reshape(-1, 1, 28, 28)
-    x_test = x_test.reshape(-1, 1, 28, 28)
+    image_size = x_train.shape[-1]
+    x_train = x_train.reshape(-1, 1, image_size, image_size)
+    x_test = x_test.reshape(-1, 1, image_size, image_size)
+    print(x_train.shape, y_train.shape)
 
     # one hot encode labels
     y_train = onehot_encode(y_train, num_classes=10)
     y_test = onehot_encode(y_test, num_classes=10)
 
     # split train data into 10% test, ensuring equal samples of all classes represented, but still shuffled
-    x_train, y_train, x_val, y_val = stratified_split(x_train, y_train, val_size=0.1, num_classes=10, random_state=123)
+    x_train, y_train, x_val, y_val = stratified_split(x_train, y_train, val_size=cnn_params['percent_train_data_to_use_for_validation'], num_classes=10, random_state=123)
+
+    print(f"Post-Processed Dataset Shapes: x_train: {x_train.shape}, y_train: {y_train.shape}, x_val: {x_val.shape}, y_val: {y_val.shape}, x_test: {x_test.shape}, y_test: {y_test.shape}")
 
     # optimizer object
     optim = AdamOptimizer(
@@ -711,18 +775,18 @@ def run_mnist():
         epsilon=1e-8    # prevent divide by 0
     )
 
-    # create CNN object and run training
-    cnn = CNN(num_classes=10)
+    # create CNN object using config file and run training
+    cnn = CNN(cnn_params)
     cnn.train(
         x_train,
         y_train,
         x_val,
         y_val,
-        validation_subset_size=1000,
-        epochs=10,
-        patience=3,
-        batch_size=32,
+        validation_subset_ratio=cnn_params['validation_subset_ratio'], # how much of the validation set to use each epoch (randomly selects this fraction from val set)
+        epochs=cnn_params['epochs'], # how many training/validation iterations
+        patience=cnn_params['patience'], # how many epochs without seeing improvement before stopping
+        batch_size=cnn_params['batch_size'], # how many images to process at once -> SGD occurs once for each batch
         optimizer=optim
     )
     
-    cnn.save_model("models/mnist_cnn.pkl")
+    cnn.save_model(f"models/{cnn_params['model_output_filename']}.pkl")
