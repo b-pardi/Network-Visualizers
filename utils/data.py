@@ -75,6 +75,35 @@ def stratified_split(x_train, y_train, val_size=0.1, num_classes=10, random_stat
 
     return x_train_strat, y_train_strat, x_val_strat, y_val_strat
 
+def select_fraction_of_data(x_data, y_data, num_classes, fraction=1.0):
+    """
+    Selects a fraction of the data, ensuring equal representation from each class.
+    Warning: Does not shuffle the data, a subsequent function should be used to shuffle (stratified_split())
+    
+    Parameters:
+        x_data (np.ndarray): The image data.
+        y_data (np.ndarray): The labels.
+        fraction (float): The fraction of data to retain (e.g., 0.2 for 20%).
+        num_classes (int): The number of classes in the dataset.
+    
+    Returns:
+        x_selected (np.ndarray): Subset of the images.
+        y_selected (np.ndarray): Subset of the labels.
+    """
+    num_samples = len(x_data)
+    target_samples = int(num_samples * fraction)
+    num_samples_per_class = target_samples // num_classes
+
+    # get num_samples_per_class of samples from each class
+    selected_sample_idxs = []
+    for class_label in range(num_classes):
+        class_idxs = np.where(y_data == class_label)[0]
+        selected_sample_idxs.append(np.random.choice(class_idxs, num_samples_per_class, replace=False))
+
+    # stack indices
+    selected_idxs = np.concatenate(selected_sample_idxs)
+
+    return x_data[selected_idxs], y_data[selected_idxs]
 
 def compute_md5_checksum(fp):
     md5_hash = hashlib.md5() # md5 hash object

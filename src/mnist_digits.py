@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 import pickle as pkl
 
-from utils.data import download_mnist, load_mnist, onehot_encode, stratified_split
+from utils.data import download_mnist, load_mnist, onehot_encode, stratified_split, select_fraction_of_data
 from utils.normalize import constant_norm
 from utils.activations import ReLULayer, SoftmaxLayer
 from utils.interfaces import Layer, LearnableLayer
@@ -679,10 +679,14 @@ def run_mnist():
     data_dir_dict = download_mnist("res/mnist_data/")
     x_train, y_train, x_test, y_test = load_mnist(data_dir_dict, mnist_md5_dict)
 
+    print(x_train.shape, y_train.shape)
+    x_train, y_train = select_fraction_of_data(x_train, y_train, 10, fraction=0.2)
+    print(x_train.shape, y_train.shape)
+
     # verify images loaded correct plotting a random one
     random_train_idx = np.random.randint(0, len(x_train))
     random_test_idx = np.random.randint(0, len(x_test))
-    #plot_mnist_digit(x_train[random_train_idx], y_train[random_train_idx], x_test[random_test_idx], y_test[random_test_idx])
+    plot_mnist_digit(x_train[random_train_idx], y_train[random_train_idx], x_test[random_test_idx], y_test[random_test_idx])
 
     # normalize pixels values to be between 0 and 1
     x_train = constant_norm(x_train, c=255.0)
