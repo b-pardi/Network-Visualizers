@@ -40,10 +40,11 @@ The script accepts several command-line arguments to control the visualization a
 - `--xor`: Run the XOR classifier
     - `-hn`, `--hidden_neurons`: Number of neurons in the hidden layer (default is 3)
     - `-ner`, `--num_epochs_refresh_visualizer`: Number of epochs per refreshing of visualizers (affects the speed of training; default is 100 for xor)
+    - `e`, `--epochs`: Number of epochs to train selected model
     
 - `-md`, `--mnist_digits`: Run the MNIST digit classifier (planned implementation)
 
-- `e`, `--epochs`: Number of epochs to train selected model
+
 
 **Note:** args shown above that are indented in the list indicate that they are only relevant to the parent arg. i.e. `-hn` is only used for `--xor`
 
@@ -291,8 +292,17 @@ Here is a list of steps I outlined for this part of project, and the status of t
 - [x] config file for data loading and processing
 - [x] config file for network parameters
 - [x] ability to assemble network with config file (layer parameters that typically require manual calculation based on input size and tunable parameters are now automatically calculated)
+- [ ] ability to load pretrained model
+- [ ] args to dictate if running pretrained model or training
 - [ ] setup pygame visuals backend
 - [ ] visualize optimizer (what the lr is set to currently)
+- [ ] Gradient Flow Visualization
+- [ ] Weight Distribution Over Time
+- [ ] Activation Distribution Across Layers
+- [ ] Feature Map Evolution
+- [ ] Prediction Confidence Heatmap
+- [ ] Feature Space Visualization (PCA/LDA)
+- [ ] Layer-by-Layer Output Visualization
 - [ ] filter pass live visual for sample image in training with weight and pixel values on top of filter/image
 - [ ] live confusion matrix on validation images
 - [ ] loop that shows images in dataset and heatmap of neurons' activations in all layers showing connections to which neurons are determining outputs for each image (can be done on trained model or validation images)
