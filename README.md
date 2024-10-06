@@ -65,6 +65,21 @@ To run the XOR neural network with a custom number of hidden neurons, epochs, an
 Simple neural network with 3 layers (1 input, 1 hidden, 1 output) to solve the XOR gate problem.
 The XOR problem is a fundamental in machine learning, introducing the concept non linearly separable classification
 
+**Notes about the visualization**
+
+Different number of hidden neurons correlate to different plots:
+- More than 3 hidden neurons:
+    - Network Architecture
+    - Loss
+    - Decision Boundaries
+    - Gradient Norms
+- 3 Hidden Neurons: `-hn 3`
+    - The above plots, as well as a 3D feature space of the Neuron activated values
+- 2 Hidden Neurons: `-hn 2`
+    - The above plots
+    - feature space is now 2D
+    - Gradient Norms is now a 3D visual of loss surface and weight trajectory
+
 **A Brief Overview of Neural Networks Before We Begin**
 A neural network is a computational model inspired by the human brain's structure. It consists of layers of interconnected neurons (also called nodes), where each neuron processes input data and passes the result to the next layer. The network learns by adjusting the weights and biases associated with these connections to minimize the difference between its predictions and the actual outputs.
 
@@ -109,9 +124,13 @@ We can see how 3 hidden neurons gives a 3D feature space below
 
 
 **New Feature**: Loss Surface and Weight Trajectory Visualization
+
+
 To gain deeper insights into how our neural network learns to solve the XOR problem, I've added a new visualization feature that plots the loss surface and the trajectory of specific weights during training.
 
+
 ![Input space vs 3D feature space](imgs/xor_problem/xor_6.png)
+
 
 
 By integrating this new feature, we enhance our understanding of the neural network's learning process. It provides a window into the optimization mechanics, highlighting how specific weights influence the network's ability to minimize loss and solve problems like XOR.
@@ -119,6 +138,18 @@ By integrating this new feature, we enhance our understanding of the neural netw
 The 3D gradient plot provides a visual representation of the loss surface and the trajectory of specific weights during training, allowing us to interpret how the neural network adjusts its parameters to solve the XOR problem effectively. By plotting the loss as a function of two key weights (w1[0,0] and w1[0,1]), we can observe how changes in these weights impact the overall loss. The surface illustrates the optimization landscape, with peaks and valleys representing areas of high and low loss, respectively. The trajectory overlaid on this surface shows the path the optimizer takes, moving from initial random weights towards the minimum loss region. Interpreting this plot helps us understand the network's learning process: as the weights adjust to minimize loss, the trajectory descends into valleys of the loss surface, indicating improved performance. This visualization connects the mathematical adjustments of weights during training to a tangible depiction of the network's ability to find the optimal parameters that solve the XOR problem, highlighting the effectiveness of gradient descent in navigating the loss landscape towards a solution.
 
 Note: The visualization enhances the existing feature space plots by showing not just the transformation of data points but also how the network adjusts its parameters to achieve that transformation.
+
+**Additional New Feature**: Gradient Norms
+
+We take the norms of the gradients of each layer's weights (except input layer since there are no weights in the input layer). This over time shows how much the weights are changing each epoch, and over time as the network learns and finds a solution, we can see the curve taper off, indicating that the weights are changing less as we approach a minimum. 
+
+
+![Input space vs 3D feature space](imgs/xor_problem/xor_7.png)
+
+
+
+**Note** This visual shows for any number of hidden neurons >= 3
+
 
 Now that we have a conceptual understanding, let's now dive into the math behind this to build the bridge between theory and application.
 
