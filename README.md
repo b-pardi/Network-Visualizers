@@ -108,6 +108,18 @@ We can see how 3 hidden neurons gives a 3D feature space below
 ![Input space vs 3D feature space](imgs/xor_problem/xor_5.png)
 
 
+**New Feature**: Loss Surface and Weight Trajectory Visualization
+To gain deeper insights into how our neural network learns to solve the XOR problem, I've added a new visualization feature that plots the loss surface and the trajectory of specific weights during training.
+
+![Input space vs 3D feature space](imgs/xor_problem/xor_6.png)
+
+
+By integrating this new feature, we enhance our understanding of the neural network's learning process. It provides a window into the optimization mechanics, highlighting how specific weights influence the network's ability to minimize loss and solve problems like XOR.
+
+The 3D gradient plot provides a visual representation of the loss surface and the trajectory of specific weights during training, allowing us to interpret how the neural network adjusts its parameters to solve the XOR problem effectively. By plotting the loss as a function of two key weights (w1[0,0] and w1[0,1]), we can observe how changes in these weights impact the overall loss. The surface illustrates the optimization landscape, with peaks and valleys representing areas of high and low loss, respectively. The trajectory overlaid on this surface shows the path the optimizer takes, moving from initial random weights towards the minimum loss region. Interpreting this plot helps us understand the network's learning process: as the weights adjust to minimize loss, the trajectory descends into valleys of the loss surface, indicating improved performance. This visualization connects the mathematical adjustments of weights during training to a tangible depiction of the network's ability to find the optimal parameters that solve the XOR problem, highlighting the effectiveness of gradient descent in navigating the loss landscape towards a solution.
+
+Note: The visualization enhances the existing feature space plots by showing not just the transformation of data points but also how the network adjusts its parameters to achieve that transformation.
+
 Now that we have a conceptual understanding, let's now dive into the math behind this to build the bridge between theory and application.
 
 **Architecture**
