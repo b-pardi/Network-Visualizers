@@ -75,6 +75,64 @@ def stratified_split(x_train, y_train, val_size=0.1, num_classes=10, random_stat
 
     return x_train_strat, y_train_strat, x_val_strat, y_val_strat
 
+def select_fraction_of_data(x_data, y_data, num_classes, fraction=1.0):
+    """
+    Selects a fraction of the data, ensuring equal representation from each class.
+    Warning: Does not shuffle the data, a subsequent function should be used to shuffle (stratified_split())
+    
+    Parameters:
+        x_data (np.ndarray): The image data.
+        y_data (np.ndarray): The labels.
+        fraction (float): The fraction of data to retain (e.g., 0.2 for 20%).
+        num_classes (int): The number of classes in the dataset.
+    
+    Returns:
+        x_selected (np.ndarray): Subset of the images.
+        y_selected (np.ndarray): Subset of the labels.
+    """
+    num_samples = len(x_data)
+    target_samples = int(num_samples * fraction)
+    num_samples_per_class = target_samples // num_classes
+
+    # get num_samples_per_class of samples from each class
+    selected_sample_idxs = []
+    for class_label in range(num_classes):
+        class_idxs = np.where(y_data == class_label)[0]
+        selected_sample_idxs.append(np.random.choice(class_idxs, num_samples_per_class, replace=False))
+
+    # stack indices
+    selected_idxs = np.concatenate(selected_sample_idxs)
+
+    return x_data[selected_idxs], y_data[selected_idxs]
+
+def downsample_square_images(x_data, target_size):
+    """
+    Downsamples the square image dataset to a specified size
+    
+    Parameters:
+        x_data (np.ndarray): The original image dataset of shape (N, H, W) or (N, 1, H, W).
+        target_size (int): The target size to downsample to (height and width will be equal).
+    
+    Returns:
+        np.ndarray: The downsampled square image dataset.
+    """
+    # if images are in batch format (N, 1, S, S) format, reshape them to (N, S, S)
+    reshaped = False
+    if len(x_data.shape) == 4 and x_data.shape[1] == 1:
+        reshaped = True
+        x_data = x_data.reshape(-1, x_data.shape[2], x_data.shape[3])
+
+    # scaling factor for how much to reduce images by
+    factor = x_data.shape[1] // target_size
+
+    # reshape and average pixel chunks
+    x_downsampled = x_data.reshape(-1, target_size, factor, target_size, factor).mean(axis=(2, 4))
+    
+    # reshape back to batch format
+    if reshaped:
+        x_downsampled = x_downsampled.reshape(-1, 1, target_size, target_size)
+
+    return x_downsampled
 
 def compute_md5_checksum(fp):
     md5_hash = hashlib.md5() # md5 hash object

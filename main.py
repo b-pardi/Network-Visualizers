@@ -13,6 +13,7 @@ def main():
     parser.add_argument('-ner', '--num_epochs_refresh_visualizer', type=int, help='Number of epochs per refreshing of visualizers (effects speed of training, default 100)')
 
     script_group.add_argument('-md', '--mnist_digits', action='store_true', help='Run MNIST classifier')
+    
 
     args = parser.parse_args()
     if args.xor:

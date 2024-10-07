@@ -3,7 +3,12 @@ import numpy as np
 def mse(y_pred, y_true):
     return np.mean(np.square(y_pred - y_true))
 
-def cce_loss(y_prob, y_true):
+def mse_surface(y_pred, y_true):
+    # Element-wise MSE for arrays of predictions
+    return np.mean(np.square(y_pred - y_true), axis=-1)
+
+
+def cce_loss(y_prob, y_true, epsilon=1e-10):
     """
     Categorical cross entropy loss
 
@@ -13,7 +18,8 @@ def cce_loss(y_prob, y_true):
         y_i is the true label of that class
         p_i is the predicted probability that it is that class (from softmax output of final FC layer)
     """
-
+    # Clip y_prob to prevent log(0)
+    y_prob = np.clip(y_prob, epsilon, 1. - epsilon)
     return -np.sum(y_true * np.log(y_prob))
     
 

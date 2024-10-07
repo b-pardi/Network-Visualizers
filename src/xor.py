@@ -6,7 +6,7 @@ import matplotlib.patches as mpatches
 import matplotlib.cm as cm
 import matplotlib.colors as mcolors
 
-from utils.errs import mse
+from utils.errs import mse, mse_surface
 from utils.activations import sigmoid, d_sigmoid
 from utils.log_reg import LogisticRegression
 
@@ -33,6 +33,14 @@ class SmallNet:
         self.input_size = 2
         self.output_size = 1
         self.epochs = epochs
+
+        # to store the gradients for visualization
+        self.num_refresh_points = self.epochs // self.num_epochs_per_refresh
+        self.w1_grads = np.zeros(self.num_refresh_points)
+        self.w2_grads = np.zeros(self.num_refresh_points)
+        self.w1_00_history = []
+        self.w1_01_history = []
+        self.loss_history = []
     
     def forward(self, X):
         # go through network from input to output and return output neuron value
@@ -48,7 +56,7 @@ class SmallNet:
 
         return self.a2
     
-    def backward(self, X, y, lr):
+    def backward(self, X, y, lr, epoch):
         '''
         Find the gradient of the loss function wrt each weight and bias
         update weights and biases to find a min of the loss function
@@ -89,6 +97,12 @@ class SmallNet:
         # same explanation as b2_grad
         b1_grad = np.sum(z1_grad, axis=0, keepdims=True)
 
+        # store gradients when preparing to update visuals
+        if epoch % self.num_epochs_per_refresh == 0:
+            idx = epoch // self.num_epochs_per_refresh
+            self.w1_grads[idx] = np.linalg.norm(w1_grad)
+            self.w2_grads[idx] = np.linalg.norm(w2_grad)
+        
         # update weights and biases, normalizing gradients and ensuring consistency across different batch sizes
         self.w2 -= lr * w2_grad / m 
         self.b2 -= lr * b2_grad / m 
@@ -104,7 +118,7 @@ class SmallNet:
                 print("Stopping training...")
                 break
             self.forward(X)
-            self.backward(X, y, lr)
+            self.backward(X, y, lr, epoch)
             loss = mse(y, self.yhat)
             self.losses.append(loss)
 
@@ -112,8 +126,18 @@ class SmallNet:
                 self.update_network_plot(X, epoch)
                 self.update_error_plot(epoch)
                 self.plot_decision_boundaries(X, y)
-                if self.h == 2 or self.h == 3:
+                
+                grad_idx = epoch // self.num_epochs_per_refresh
+                if self.h == 2 or self.h == 3: # feature space plot works for 2 or 3 dimensions hidden neurons
                     self.plot_feature_space(y)
+                
+                if self.h == 2: # 3d gradient plot only works for 2 dims (needs loss surface, w1_grad and w2_grad)
+                    self.update_3d_gradient_plot(X, y)
+
+                if self.h >= 3: # gradient plot takes the norm of gradients per layer to quantify its change over time
+                    self.w1_grads[grad_idx] = np.linalg.norm(self.w1)
+                    self.w2_grads[grad_idx] = np.linalg.norm(self.w2)
+                    self.update_gradient_plot(grad_idx)
                 
             progress_bar.set_postfix(epoch=epoch, loss=loss)
 
@@ -122,43 +146,53 @@ class SmallNet:
         return (probs > 0.5).astype(int)
 
     def initialize_visualization(self):
-        if self.h == 2 or self.h == 3:
-            self.fig = plt.figure(figsize=(14, 6))
-            gs = self.fig.add_gridspec(2, 3, width_ratios=[1.1, 1, 1.2], height_ratios=[1,1])  # grid spec layout, make the network plot 2x width of loss and decision boundaries
+        self.fig = plt.figure(figsize=(16, 8))
+
+        # different number of hidden neurons -> different plots -> different grid layouts
+        if self.h == 2:
+            gs = self.fig.add_gridspec(2, 3, width_ratios=[1, 1, 1.6], height_ratios=[1,1])  # grid spec layout
+            self.ax_nn = self.fig.add_subplot(gs[0, 0])
+            self.ax_loss = self.fig.add_subplot(gs[1, 0])
+            self.ax_decision = self.fig.add_subplot(gs[0, 1])
+            self.ax_feature = self.fig.add_subplot(gs[1, 1]) # 2D feature space plot for 2 hidden neurons
+            self.ax_gradients = self.fig.add_subplot(gs[:, 2], projection='3d') # 3D gradient plot (loss surface and gradient path)
+
+        elif self.h == 3:
+            gs = self.fig.add_gridspec(2, 3, width_ratios=[1, 1, 1.6], height_ratios=[1,1])  # grid spec layout
+            self.ax_nn = self.fig.add_subplot(gs[0, 0])
+            self.ax_loss = self.fig.add_subplot(gs[1, 0])
+            self.ax_decision = self.fig.add_subplot(gs[0, 1])
+            self.ax_feature = self.fig.add_subplot(gs[:, 2], projection='3d') # 3D feature space plot for 3 hidden neurons
+            self.ax_gradients = self.fig.add_subplot(gs[1, 1]) # 3D gradient plot (loss surface and gradient path)
+        
         else:
-            self.fig = plt.figure(figsize=(8, 6))
-            gs = self.fig.add_gridspec(2, 2, width_ratios=[1, 1], height_ratios=[1 ,1])  # grid spec layout, make the network plot 2x width of loss and decision boundaries
+            gs = self.fig.add_gridspec(2, 3, width_ratios=[1.2, 1, 1], height_ratios=[1,1])  # grid spec layout
+            self.ax_nn = self.fig.add_subplot(gs[:, 0])
+            self.ax_loss = self.fig.add_subplot(gs[0, 1])
+            self.ax_decision = self.fig.add_subplot(gs[1, 1])
+            self.ax_gradients = self.fig.add_subplot(gs[:, 2]) # 3D gradient plot (loss surface and gradient path)
 
         # get color map to use for all plots (that need color maps)
         self.cmap = cm.get_cmap('cool')
         self.cnorm = mcolors.Normalize(vmin=0, vmax=1)
 
         # Network plot
-        self.ax_nn = self.fig.add_subplot(gs[:, 0])
         self.ax_nn.axis('off')
         self.ax_nn.grid(False)
         
         # Loss plot
-        self.ax_loss = self.fig.add_subplot(gs[0, 1])
         self.ax_loss.set_title('Training Loss')
         self.ax_loss.set_xlabel('Epoch')
         self.ax_loss.set_ylabel('Loss')
 
         # Decision boundaries plot
-        self.ax_decision = self.fig.add_subplot(gs[1, 1])
         self.ax_decision.set_title('Decision Boundaries')
         self.ax_decision.set_xlabel('Input 1')
         self.ax_decision.set_ylabel('Input 2')
 
-        # feature space plot
-        if self.h == 2:
-            self.ax_feature = self.fig.add_subplot(gs[:, 2])
-        elif self.h == 3:
-            self.ax_feature = self.fig.add_subplot(gs[:, 2], projection='3d')
-
         plt.ion()  # Interactive mode on
         self.fig.canvas.mpl_connect('key_press_event', self.on_quit_key)
-        plt.tight_layout(pad=2.0)
+        plt.tight_layout(pad=1.0)
         plt.show()
 
     def plot_network(self):
@@ -293,6 +327,84 @@ class SmallNet:
 
         self.predict(X) # reset so network variables do not have gridspace data points stored
 
+        plt.draw()
+        plt.pause(0.01)
+
+    def update_gradient_plot(self, grad_idx):
+        self.ax_gradients.clear()
+        
+        # Plot gradient norms
+        self.ax_gradients.plot(np.arange(grad_idx + 1) * self.num_epochs_per_refresh, self.w1_grads[:grad_idx + 1], label='w1 gradient norm', color='blue')
+        self.ax_gradients.plot(np.arange(grad_idx + 1) * self.num_epochs_per_refresh, self.w2_grads[:grad_idx + 1], label='w2 gradient norm', color='purple')
+        self.ax_gradients.set_title('Gradient Norms')
+        self.ax_gradients.set_xlabel('Epoch')
+        self.ax_gradients.set_ylabel('Gradient Norm')
+        self.ax_gradients.legend()
+
+        self.fig.canvas.draw()
+        self.fig.canvas.flush_events()
+
+    def update_3d_gradient_plot(self, X, y):
+        """
+        Update the 3D gradient plot to visualize the loss surface and the trajectory of weights.
+
+        Parameters:
+        - grad_idx (int): The current index in the gradients array, corresponding to the epoch.
+        - X (numpy.ndarray): Input data of shape (m, 2), where m is the number of examples.
+        - y (numpy.ndarray): True labels of shape (m, 1).
+
+        This method performs the following steps:
+        1. Defines a grid of values around the current weights w1[0,0] and w1[0,1].
+        2. Computes the loss at each point on the grid, keeping other weights constant.
+        3. Plots the loss surface as a 3D plot.
+        4. Tracks and plots the trajectory of the selected weights over the loss surface.
+        """
+        # Define ranges for w1[0,0] and w1[0,1] around their current values
+        delta = 5  # Adjust the range as needed
+        num_points = 30  # Number of points in the grid
+        w1_00 = self.w1[0, 0]
+        w1_01 = self.w1[0, 1]
+
+        x0, xf = w1_00 - delta, w1_00 + delta
+        y0, yf = w1_01 - delta, w1_01 + delta
+
+        w1_00_vals = np.linspace(x0, xf, num_points)
+        w1_01_vals = np.linspace(y0, yf, num_points)
+        W1_00, W1_01 = np.meshgrid(w1_00_vals, w1_01_vals)
+        Loss = np.zeros_like(W1_00)
+
+        # Compute loss at each grid point
+        for i in range(W1_00.shape[0]):
+            for j in range(W1_00.shape[1]):
+                w1_copy = self.w1.copy()
+                w1_copy[0, 0] = W1_00[i, j]
+                w1_copy[0, 1] = W1_01[i, j]
+                # Forward pass with modified weights
+                # simulate a forward pass as to not modify the weights in the actual network
+                z1 = np.dot(X, w1_copy) + self.b1
+                a1 = sigmoid(z1)
+                z2 = np.dot(a1, self.w2) + self.b2
+                a2 = sigmoid(z2)
+                loss = mse(y, a2)
+                Loss[i, j] = loss
+
+        # Clear and plot the loss surface
+        self.ax_gradients.clear()
+        self.ax_gradients.plot_surface(W1_00, W1_01, Loss, alpha=0.4, cmap='viridis')
+        self.ax_gradients.set_xlabel('Neuron 1 Weight')
+        self.ax_gradients.set_ylabel('Neuron 2 Weight')
+        self.ax_gradients.set_zlabel('Loss Surface')
+        self.ax_gradients.set_title('Loss Surface and Weight Trajectory')
+
+        # Append current weights and loss to history
+        self.w1_00_history.append(w1_00)
+        self.w1_01_history.append(w1_01)
+        self.loss_history.append(self.losses[-1])
+
+        # Plot the trajectory of weights over the loss surface
+        self.ax_gradients.plot3D(self.w1_00_history, self.w1_01_history, self.loss_history, 'r.-')
+
+        # Redraw the plot
         plt.draw()
         plt.pause(0.01)
 
