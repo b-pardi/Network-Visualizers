@@ -5,10 +5,16 @@ from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.patches as mpatches
 import matplotlib.cm as cm
 import matplotlib.colors as mcolors
+import os
 
-from utils.errs import mse, mse_surface
+from utils.errs import mse
 from utils.activations import sigmoid, d_sigmoid
 from utils.log_reg import LogisticRegression
+
+# utilize more threads for efficiency
+os.environ['OMP_NUM_THREADS'] = '4'
+os.environ['MKL_NUM_THREADS'] = '4'
+os.environ['OPENBLAS_NUM_THREADS'] = '4'
 
 class SmallNet:
     """Small feed forward network designed to solve the classic XOR problem.
@@ -125,7 +131,7 @@ class SmallNet:
             if epoch % self.num_epochs_per_refresh == 0:
                 self.update_network_plot(X, epoch)
                 self.update_error_plot(epoch)
-                self.plot_decision_boundaries(X, y)
+                self.update_decision_boundaries()
                 
                 grad_idx = epoch // self.num_epochs_per_refresh
                 if self.h == 2 or self.h == 3: # feature space plot works for 2 or 3 dimensions hidden neurons
@@ -138,14 +144,22 @@ class SmallNet:
                     self.w1_grads[grad_idx] = np.linalg.norm(self.w1)
                     self.w2_grads[grad_idx] = np.linalg.norm(self.w2)
                     self.update_gradient_plot(grad_idx)
+
+                # process all pending plot updates
+                self.fig.canvas.flush_events()
+                #plt.pause(0.01)
                 
             progress_bar.set_postfix(epoch=epoch, loss=loss)
 
     def predict(self, X):
-        probs = self.forward(X)
-        return (probs > 0.5).astype(int)
+        # Perform forward pass computations without modifying internal state
+        z1 = np.dot(X, self.w1) + self.b1
+        a1 = sigmoid(z1)
+        z2 = np.dot(a1, self.w2) + self.b2
+        a2 = sigmoid(z2)
+        return (a2 >= 0.5).astype(int)
 
-    def initialize_visualization(self):
+    def initialize_visualization(self, X, y):
         self.fig = plt.figure(figsize=(16, 8))
 
         # different number of hidden neurons -> different plots -> different grid layouts
@@ -173,31 +187,41 @@ class SmallNet:
             self.ax_gradients = self.fig.add_subplot(gs[:, 2]) # 3D gradient plot (loss surface and gradient path)
 
         # get color map to use for all plots (that need color maps)
-        self.cmap = cm.get_cmap('cool')
+        self.cmap = cm.get_cmap('cool', 2)
         self.cnorm = mcolors.Normalize(vmin=0, vmax=1)
 
         # Network plot
-        self.ax_nn.axis('off')
-        self.ax_nn.grid(False)
-        
+        self.init_network_plot()
+
         # Loss plot
         self.ax_loss.set_title('Training Loss')
         self.ax_loss.set_xlabel('Epoch')
         self.ax_loss.set_ylabel('Loss')
+        self.ax_loss.plot([], [], 'r-') # temporary line so it can be updated
+        
 
         # Decision boundaries plot
-        self.ax_decision.set_title('Decision Boundaries')
-        self.ax_decision.set_xlabel('Input 1')
-        self.ax_decision.set_ylabel('Input 2')
+        self.init_decision_boundaries_plot(X, y)
+
+        self.fig.canvas.draw()
+        self.backgrounds = { # initialize backgrounds for blitting
+            'nn': self.fig.canvas.copy_from_bbox(self.ax_nn.bbox),
+            'loss': self.fig.canvas.copy_from_bbox(self.ax_loss.bbox),
+            'decision': self.fig.canvas.copy_from_bbox(self.ax_decision.bbox),
+            'gradients': self.fig.canvas.copy_from_bbox(self.ax_gradients.bbox)
+        }
+
+        if self.h ==2 or self.h == 3:
+            self.backgrounds['feature'] = self.fig.canvas.copy_from_bbox(self.ax_feature.bbox),
 
         plt.ion()  # Interactive mode on
         self.fig.canvas.mpl_connect('key_press_event', self.on_quit_key)
         plt.tight_layout(pad=1.0)
         plt.show()
 
-    def plot_network(self):
-        self.ax_nn.clear()
-        self.ax_nn.axis('off')  # Ensure gridlines are off
+    def init_network_plot(self):
+        self.ax_nn.axis('off')
+        self.ax_nn.grid(False)
 
         self.layers = [self.input_size, self.h, self.output_size]
 
@@ -216,15 +240,22 @@ class SmallNet:
             self.pos.append(layer_positions)
 
         # init circles for neurons
+        self.layer_node_patches = []
         for layer in self.pos:
+            layer_patches = []
             for neuron in layer:
-                self.ax_nn.add_patch(plt.Circle(neuron, 0.2, edgecolor='black', fill=False))
+                patch = plt.Circle(neuron, 0.2, edgecolor='black', fill=False)
+                self.ax_nn.add_patch(patch)
+                layer_patches.append(patch)
+            self.layer_node_patches.append(layer_patches)
 
         # plot connections between neurons
+        self.edge_lines = []
         for i in range(len(self.pos) - 1):
             for n_start in self.pos[i]:
                 for n_end in self.pos[i + 1]:
-                    self.ax_nn.plot([n_start[0], n_end[0]], [n_start[1], n_end[1]], 'k-', linewidth=1, alpha=0.25)
+                    line, = self.ax_nn.plot([n_start[0], n_end[0]], [n_start[1], n_end[1]], 'k-', linewidth=1, alpha=0.25)
+                    self.edge_lines.append(line)
 
         x_buffer = 1.1
         total_width = 3 * (len(self.layers) - 1)  # Total width based on the number of layers and spacing
@@ -234,55 +265,88 @@ class SmallNet:
         plt.draw()
 
     def update_network_plot(self, X, epoch):
+        # restore static elements
+        self.fig.canvas.restore_region(self.backgrounds['nn'])
+
         self.forward(X)
-        self.plot_network()
 
         base_font_size = 13
         min_font_size = 2
         font_size = max(base_font_size - (self.h), min_font_size)
 
+        # remove previous text
+        if hasattr(self, 'texts'):
+            for txt in self.texts:
+                txt.remove()
+        self.texts = []
+
         # Plot neurons with updated values
-        for i, layer in enumerate(self.pos):
-            for j, neuron in enumerate(layer):
+        for i, layer_patches in enumerate(self.layer_node_patches):
+            for j, patch in enumerate(layer_patches):
+                neuron = self.pos[i][j]
                 if i == 0:  # plotting input layer
                     for k in range(X.shape[0]):
-                        self.ax_nn.text(neuron[0] - 0.9, neuron[1] - 0.3 + 0.3 * k, f'{X[k, j]:.2f}', ha='left', va='top', fontsize=font_size)
+                        text = self.ax_nn.text(neuron[0] - 0.9, neuron[1] - 0.3 + 0.3 * k, f'{X[k, j]:.2f}', ha='left', va='top', fontsize=font_size)
+                        self.texts.append(text)
 
                 elif i == len(self.pos) - 1:  # output layer
-                    self.ax_nn.add_patch(plt.Circle(neuron, 0.2, color='black', alpha=self.a2[0, 0]))
-                    self.ax_nn.text(neuron[0], neuron[1] + 0.8, f'Z: {self.z2[0, 0]:.4f}', ha='center', va='top', fontsize=font_size)
-                    self.ax_nn.text(neuron[0], neuron[1] + 0.48, f'A: {self.a2[0, 0]:.4f}', ha='center', va='top', fontsize=font_size)
-                    self.ax_nn.text(neuron[0], neuron[1] - 0.35, f'B: {self.b2[0, 0]:.4f}', ha='center', va='top', fontsize=font_size)
+                    # update facecolor and transparency
+                    patch.set_facecolor('black')
+                    patch.set_alpha(self.a2[0, 0])
+                    z_text = self.ax_nn.text(neuron[0], neuron[1] + 0.8, f'Z: {self.z2[0, 0]:.4f}', ha='center', va='top', fontsize=font_size)
+                    a_text = self.ax_nn.text(neuron[0], neuron[1] + 0.48, f'A: {self.a2[0, 0]:.4f}', ha='center', va='top', fontsize=font_size)
+                    b_text = self.ax_nn.text(neuron[0], neuron[1] - 0.35, f'B: {self.b2[0, 0]:.4f}', ha='center', va='top', fontsize=font_size)
+                    self.texts.extend([z_text, a_text, b_text])
 
                 else:  # hidden layer
-                    self.ax_nn.add_patch(plt.Circle(neuron, 0.2, color='black', alpha=self.a1[0, j]))
-                    self.ax_nn.text(neuron[0], neuron[1] + 0.8, f'Z: {self.z1[0, j]:.4f}', ha='center', va='top', fontsize=font_size)
-                    self.ax_nn.text(neuron[0], neuron[1] + 0.48, f'A: {self.a1[0, j]:.4f}', ha='center', va='top', fontsize=font_size)
-                    self.ax_nn.text(neuron[0], neuron[1] - 0.35, f'B: {self.b1[0, j]:.4f}', ha='center', va='top', fontsize=font_size)
+                    patch.set_facecolor('black')
+                    patch.set_alpha(self.a1[0, j]) 
+                    z_text = self.ax_nn.text(neuron[0], neuron[1] + 0.8, f'Z: {self.z1[0, j]:.4f}', ha='center', va='top', fontsize=font_size)
+                    a_text = self.ax_nn.text(neuron[0], neuron[1] + 0.48, f'A: {self.a1[0, j]:.4f}', ha='center', va='top', fontsize=font_size)
+                    b_text = self.ax_nn.text(neuron[0], neuron[1] - 0.35, f'B: {self.b1[0, j]:.4f}', ha='center', va='top', fontsize=font_size)
+                    self.texts.extend([z_text, a_text, b_text])
 
         self.ax_nn.set_title(f'Epoch {epoch}', pad=40)
-        plt.draw()
+        # Draw the updated dynamic elements
+        for patch in sum(self.layer_node_patches, []):
+            self.ax_nn.draw_artist(patch)
+        for txt in self.texts:
+            self.ax_nn.draw_artist(txt)
+        self.ax_nn.draw_artist(self.ax_nn.title)
+
+        # Blit the axes
+        self.fig.canvas.blit(self.ax_nn.bbox)
 
     def update_error_plot(self, epoch):
-        self.ax_loss.clear()
-        self.ax_loss.plot(range(len(self.losses)), self.losses, 'r-')
-        self.ax_loss.set_title('Training Loss')
-        self.ax_loss.set_xlabel('Epoch')
-        self.ax_loss.set_ylabel('Loss')
+        # restore static elements
+        self.fig.canvas.restore_region(self.backgrounds['loss'])
+        
+        # update dynamic data (plotting but with blit)
+        self.ax_loss.lines[0].set_data(range(len(self.losses)), self.losses)
         x_padding = 0.06 * len(self.losses)
         self.ax_loss.set_xlim([-x_padding, epoch+x_padding])
         self.ax_loss.set_ylim([0, max(self.losses) + 0.1])
-        plt.draw()
+        
+        # instead of draw, use draw artist to only draw updated dynamic objects (like the line)
+        self.ax_loss.draw_artist(self.ax_loss.lines[0])
 
-    def plot_decision_boundaries(self, X, y):
-        self.ax_decision.clear()
+        # blit to canvas
+        self.fig.canvas.blit(self.ax_loss.bbox)
+
+    def init_decision_boundaries_plot(self, X, y):
+        self.ax_decision.set_title('Decision Boundaries')
+        self.ax_decision.set_xlabel('Input 1')
+        self.ax_decision.set_ylabel('Input 2')
 
         # define grid of plot to show the 4 points with some padding
         x_min, x_max = X[:, 0].min() - 1, X[:, 0].max() + 1
         y_min, y_max = X[:, 1].min() - 1, X[:, 1].max() + 1
 
+        # define boundaries of image to match axes limits (image replaces contour plot for efficiency)
+        self.extent = [x_min, x_max, y_min, y_max]
+
         # make a mesh of points to cover whole space
-        xx, yy = np.meshgrid(np.arange(x_min, x_max, 0.01),
+        self.xx, self.yy = np.meshgrid(np.arange(x_min, x_max, 0.01),
                             np.arange(y_min, y_max, 0.01))
         
         # flatten xx and yy meshes and stack them into 2d arr
@@ -307,28 +371,40 @@ class SmallNet:
             [1 2]
             [2 2]]
         '''
-        grid_space = np.c_[xx.ravel(), yy.ravel()]
-        
-        # Predict class labels for each point in the grid
-        Z = self.predict(grid_space)
-        Z = Z.reshape(xx.shape)
-        
-        self.ax_decision.contourf(xx, yy, Z, alpha=0.8, cmap='cool') # plot contours of decision boundaries, coloring region according to Z
-        self.ax_decision.scatter(X[:, 0], X[:, 1], c=y, cmap='cool', edgecolor='k', marker='o')
-        self.ax_decision.set_title('Decision Boundaries')
-        self.ax_decision.set_xlabel('Input 1')
-        self.ax_decision.set_ylabel('Input 2')
-        
+        self.grid_space = np.c_[self.xx.ravel(), self.yy.ravel()]
+        print(self.grid_space.shape)
+
+        self.ax_decision.scatter(X[:, 0], X[:, 1], c=y, cmap='cool', edgecolor='k', marker='o', zorder=10)
+
         # Create custom handles for the two classes
         class_0 = mpatches.Patch(color=self.cmap(self.cnorm(0)), label='False (0)')
         class_1 = mpatches.Patch(color=self.cmap(self.cnorm(1)), label='True (1)')
 
         self.ax_decision.legend(handles=[class_0, class_1], loc='best')
 
-        self.predict(X) # reset so network variables do not have gridspace data points stored
+        # Initialize the contour plot (dynamic element)
+        # using imshow to display decision boundaries is more efficient with blitting than contour
+        Z = np.zeros_like(self.xx) 
+        self.decision_img = self.ax_decision.imshow(Z, extent=self.extent, cmap=self.cmap, norm=self.cnorm, alpha=0.8, origin='lower', aspect='auto', zorder=1)
 
-        plt.draw()
-        plt.pause(0.01)
+
+    def update_decision_boundaries(self):
+        # Restore background
+        self.fig.canvas.restore_region(self.backgrounds['decision'])
+
+        # Predict class labels for each point in the grid
+        Z = self.predict(self.grid_space)
+        Z = Z.reshape(self.xx.shape)
+
+        # Update the pcolormesh data
+        self.decision_img.set_data(Z)
+
+        # Draw the updated pcolormesh
+        self.ax_decision.draw_artist(self.decision_img)
+
+        # Blit the axes
+        self.fig.canvas.blit(self.ax_decision.bbox)
+        self.fig.canvas.flush_events()
 
     def update_gradient_plot(self, grad_idx):
         self.ax_gradients.clear()
@@ -406,7 +482,6 @@ class SmallNet:
 
         # Redraw the plot
         plt.draw()
-        plt.pause(0.01)
 
     def plot_feature_space(self, y):
         self.ax_feature.cla()
@@ -465,8 +540,7 @@ def run_xor(h=3, ner=100):
     ])
 
     net = SmallNet(h, epochs=50000, num_epochs_per_refresh=ner)
-    net.initialize_visualization()
-    net.plot_network()
+    net.initialize_visualization(X, y)
     net.train(X, y)
 
     y_pred = net.forward(X)
