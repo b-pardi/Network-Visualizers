@@ -483,9 +483,9 @@ class SmallNet:
         if self.h == 2:
             # Plot in 2D
             self.ax_feature.scatter(activations[:, 0], activations[:, 1], s=100, c=y, cmap='cool')
-            plt.xlabel('Activation of Neuron 1')
-            plt.ylabel('Activation of Neuron 2')
-            plt.title('2D Feature Space Transformed by Hidden Layer')
+            self.ax_feature.set_xlabel('Activation of Neuron 1')
+            self.ax_feature.set_ylabel('Activation of Neuron 2')
+            self.ax_feature.set_title('2D Feature Space Transformed by Hidden Layer')
 
             # plot boundary line
             x = np.array([activations[:, 0].min() - 1, activations[:, 0].max() + 1])
