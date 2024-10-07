@@ -188,6 +188,7 @@ Where $m$ and $p$ are the current filter coordinates, also found in the above fo
 ## Planned implementations
 - MNIST hand written numbers -> CNN
 - random forest visuals, showing multiple trees in ensemble converging on decision
+- knn visuals shows clusters form
 - attention model predictions
 
 ## Contributing
