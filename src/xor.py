@@ -239,7 +239,7 @@ class SmallNet:
         for layer in self.pos:
             layer_patches = []
             for neuron in layer:
-                patch = plt.Circle(neuron, 0.2, edgecolor='black', fill=False)
+                patch = plt.Circle(neuron, 0.2, edgecolor='black', fill=True)
                 self.ax_nn.add_patch(patch)
                 layer_patches.append(patch)
             self.layer_node_patches.append(layer_patches)
@@ -257,7 +257,6 @@ class SmallNet:
         self.ax_nn.set_xlim(-x_buffer, x_buffer + total_width)
         self.ax_nn.set_ylim(0.7, 2 * max(self.layers) + 0.3)
         self.ax_nn.set_aspect('equal', adjustable='datalim')  # Set the aspect ratio to be equal
-        plt.draw()
 
     def update_network_plot(self, X, epoch):
         # restore static elements
@@ -398,7 +397,6 @@ class SmallNet:
 
         # Blit the axes
         self.fig.canvas.blit(self.ax_decision.bbox)
-        self.fig.canvas.flush_events()
 
     def plot_gradient_norms(self, grad_idx):
         self.w1_grads[grad_idx] = np.linalg.norm(self.w1)
@@ -412,9 +410,6 @@ class SmallNet:
         self.ax_gradient_norms.set_xlabel('Epoch')
         self.ax_gradient_norms.set_ylabel('Gradient Norm')
         self.ax_gradient_norms.legend()
-
-        self.fig.canvas.draw()
-        self.fig.canvas.flush_events()
 
     def plot_gradient_trajectory(self, X, y):
         """
@@ -475,9 +470,6 @@ class SmallNet:
 
         # Plot the trajectory of weights over the loss surface
         self.ax_gradient_trajectory.plot3D(self.w1_00_history, self.w1_01_history, self.loss_history, 'r.-')
-
-        # Redraw the plot
-        plt.draw()
 
     def plot_feature_space(self, y):
         self.ax_feature.cla()
