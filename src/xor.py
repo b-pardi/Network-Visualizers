@@ -155,7 +155,18 @@ class SmallNet:
         z2 = np.dot(a1, self.w2) + self.b2
         a2 = sigmoid(z2)
         return (a2 >= 0.5).astype(int)
-
+    
+    def predict_prob(self, X, w1_copy=None):
+        # used for meshgrid for loss surface, if w1_copy is none just use regular w1
+        if not w1_copy.any():
+            w1_copy = self.w1
+        # Perform forward pass computations without modifying internal state and return probability of predictions
+        z1 = np.dot(X, w1_copy) + self.b1
+        a1 = sigmoid(z1)
+        z2 = np.dot(a1, self.w2) + self.b2
+        a2 = sigmoid(z2)
+        return a2
+    
     def initialize_visualization(self, X, y):
         self.fig = plt.figure(figsize=(16, 8))
 
@@ -448,10 +459,7 @@ class SmallNet:
                 w1_copy[0, 1] = W1_01[i, j]
                 # Forward pass with modified weights
                 # simulate a forward pass as to not modify the weights in the actual network
-                z1 = np.dot(X, w1_copy) + self.b1
-                a1 = sigmoid(z1)
-                z2 = np.dot(a1, self.w2) + self.b2
-                a2 = sigmoid(z2)
+                a2 = self.predict_prob(X, w1_copy)                
                 loss = mse(y, a2)
                 Loss[i, j] = loss
 
@@ -531,7 +539,6 @@ def run_xor(h=3, ner=100):
 
     y_pred = net.forward(X)
     print(f"Predicted output:\n {y_pred}")
-
 
 
 if __name__ == '__main__':
