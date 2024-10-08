@@ -155,7 +155,18 @@ class SmallNet:
         z2 = np.dot(a1, self.w2) + self.b2
         a2 = sigmoid(z2)
         return (a2 >= 0.5).astype(int)
-
+    
+    def predict_prob(self, X, w1_copy=None):
+        # used for meshgrid for loss surface, if w1_copy is none just use regular w1
+        if not w1_copy.any():
+            w1_copy = self.w1
+        # Perform forward pass computations without modifying internal state and return probability of predictions
+        z1 = np.dot(X, w1_copy) + self.b1
+        a1 = sigmoid(z1)
+        z2 = np.dot(a1, self.w2) + self.b2
+        a2 = sigmoid(z2)
+        return a2
+    
     def initialize_visualization(self, X, y):
         self.fig = plt.figure(figsize=(16, 8))
 
@@ -239,7 +250,7 @@ class SmallNet:
         for layer in self.pos:
             layer_patches = []
             for neuron in layer:
-                patch = plt.Circle(neuron, 0.2, edgecolor='black', fill=False)
+                patch = plt.Circle(neuron, 0.2, edgecolor='black', fill=True)
                 self.ax_nn.add_patch(patch)
                 layer_patches.append(patch)
             self.layer_node_patches.append(layer_patches)
@@ -257,7 +268,6 @@ class SmallNet:
         self.ax_nn.set_xlim(-x_buffer, x_buffer + total_width)
         self.ax_nn.set_ylim(0.7, 2 * max(self.layers) + 0.3)
         self.ax_nn.set_aspect('equal', adjustable='datalim')  # Set the aspect ratio to be equal
-        plt.draw()
 
     def update_network_plot(self, X, epoch):
         # restore static elements
@@ -398,7 +408,6 @@ class SmallNet:
 
         # Blit the axes
         self.fig.canvas.blit(self.ax_decision.bbox)
-        self.fig.canvas.flush_events()
 
     def plot_gradient_norms(self, grad_idx):
         self.w1_grads[grad_idx] = np.linalg.norm(self.w1)
@@ -412,9 +421,6 @@ class SmallNet:
         self.ax_gradient_norms.set_xlabel('Epoch')
         self.ax_gradient_norms.set_ylabel('Gradient Norm')
         self.ax_gradient_norms.legend()
-
-        self.fig.canvas.draw()
-        self.fig.canvas.flush_events()
 
     def plot_gradient_trajectory(self, X, y):
         """
@@ -453,10 +459,7 @@ class SmallNet:
                 w1_copy[0, 1] = W1_01[i, j]
                 # Forward pass with modified weights
                 # simulate a forward pass as to not modify the weights in the actual network
-                z1 = np.dot(X, w1_copy) + self.b1
-                a1 = sigmoid(z1)
-                z2 = np.dot(a1, self.w2) + self.b2
-                a2 = sigmoid(z2)
+                a2 = self.predict_prob(X, w1_copy)                
                 loss = mse(y, a2)
                 Loss[i, j] = loss
 
@@ -476,9 +479,6 @@ class SmallNet:
         # Plot the trajectory of weights over the loss surface
         self.ax_gradient_trajectory.plot3D(self.w1_00_history, self.w1_01_history, self.loss_history, 'r.-')
 
-        # Redraw the plot
-        plt.draw()
-
     def plot_feature_space(self, y):
         self.ax_feature.cla()
         activations = self.a1  # self.a1 contains the activations of the first hidden layer
@@ -491,9 +491,9 @@ class SmallNet:
         if self.h == 2:
             # Plot in 2D
             self.ax_feature.scatter(activations[:, 0], activations[:, 1], s=100, c=y, cmap='cool')
-            plt.xlabel('Activation of Neuron 1')
-            plt.ylabel('Activation of Neuron 2')
-            plt.title('2D Feature Space Transformed by Hidden Layer')
+            self.ax_feature.set_xlabel('Activation of Neuron 1')
+            self.ax_feature.set_ylabel('Activation of Neuron 2')
+            self.ax_feature.set_title('2D Feature Space Transformed by Hidden Layer')
 
             # plot boundary line
             x = np.array([activations[:, 0].min() - 1, activations[:, 0].max() + 1])
@@ -539,7 +539,6 @@ def run_xor(h=3, ner=100):
 
     y_pred = net.forward(X)
     print(f"Predicted output:\n {y_pred}")
-
 
 
 if __name__ == '__main__':

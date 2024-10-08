@@ -1,12 +1,8 @@
 import numpy as np
 
-def mse(y_pred, y_true):
-    return np.mean(np.square(y_pred - y_true))
 
-def mse_surface(y_pred, y_true):
-    # Element-wise MSE for arrays of predictions
-    return np.mean(np.square(y_pred - y_true), axis=-1)
-
+def mse(y_pred, y_true, axis=None):
+    return np.mean(np.square(y_pred - y_true), axis=axis)
 
 def cce_loss(y_prob, y_true, epsilon=1e-10):
     """
