@@ -1,0 +1,61 @@
+{
+    "epochs": 10,
+    "patience": 2,
+    "batch_size": 32,
+    "validation_subset_ratio": 0.5,
+    "percent_of_train_data_to_use": 0.2,
+    "percent_train_data_to_use_for_validation": 0.2,
+    "num_classes": 10,
+    "input_size": 14,
+    "in_channels": 1,
+    "model_output_filename": "mnist_cnn",
+    "layers": [
+        {
+            "type": "conv",
+            "out_channels": 8,
+            "filter_size": 3,
+            "stride": 1,
+            "padding": 0
+        },
+        {
+            "type": "relu"
+        },
+        {
+            "type": "maxpool",
+            "filter_size": 2,
+            "stride": 2
+        },
+        {
+            "type": "conv",
+            "out_channels": 16,
+            "filter_size": 3,
+            "stride": 1,
+            "padding": 0
+        },
+        {
+            "type": "relu"
+        },
+        {
+            "type": "maxpool",
+            "filter_size": 2,
+            "stride": 2
+        },
+        {
+            "type": "flatten"
+        },
+        {
+            "type": "dense",
+            "out_features": 128
+        },
+        {
+            "type": "relu"
+        },
+        {
+            "type": "dense",
+            "out_features": 10
+        },
+        {
+            "type": "softmax"
+        }
+    ]
+}

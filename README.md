@@ -43,7 +43,11 @@ The script accepts several command-line arguments to control the visualization a
     - `e`, `--epochs`: Number of epochs to train selected model
     
 - `-md`, `--mnist_digits`: Run the MNIST digit classifier (planned implementation)
-
+    - `-m`, `--mode`:
+        - `train`: will run the fully self implemented Convolutional Neural Network training loop on the MNIST dataset and show corresponding visuals (WIP). Uses default config file `config/default_cnn_params.json`
+            - `-uc`, `--user_config`: Opt to use the `config/user_cnn_params.json` file to assemble the network when training. This is the customizeable CNN configuration the user can alter to change hyperparameters and the assembly of network layers without having to define a custom CNN class
+        - `infer`: Infer on a pretrained CNN created from this network and show corresponding visuals. Pretrained CNN using default config file
+            - `-um`, `--user_model` <file_path>: Opt to use a model the user has previously trained with this project's CNN for inference and show the visualizations that go with it. Will read from file path spec'd in the argument. Note, if the user has not trained there own yet, or the name/location of this pickle object file was changed, it will throw a file not found error. Additionaly please note this is not a weight or tensors file, this a file of the whole CNN object, so that the parameters used for training can be read on inference. This allows things like input image size to be read so that the images can be scaled to the same size that the model was trained on.
 
 
 **Note:** args shown above that are indented in the list indicate that they are only relevant to the parent arg. i.e. `-hn` is only used for `--xor`
@@ -53,6 +57,14 @@ The script accepts several command-line arguments to control the visualization a
 To run the XOR neural network with a custom number of hidden neurons, epochs, and visualizer refresh rate:
 
 `python main.py --xor -hn 3 -ner 200 -e 40000`
+
+To run the MNIST classifier and train a CNN using a user-defined configuration:
+
+`python main.py --mnist_digits -m train -uc`
+
+python main.py --mnist_digits -m infer -um models/custom_mnist_model.pkl
+
+`python main.py --mnist_digits -m infer -um models/custom_mnist_model.pkl`
 
 **Note** It is most useful to run the XOR network with 2 or 3 hidden neurons, as those allow you to see the feature space mapping of the input points. Beyond 3 dimensions it is not feasible for us to visualize, so the feature space plot is omitted. However the network will still run and train with other plots showing.
 
@@ -335,8 +347,11 @@ Here is a list of steps I outlined for this part of project, and the status of t
 - [x] config file for data loading and processing
 - [x] config file for network parameters
 - [x] ability to assemble network with config file (layer parameters that typically require manual calculation based on input size and tunable parameters are now automatically calculated)
-- [ ] ability to load pretrained model
-- [ ] args to dictate if running pretrained model or training
+- [x] args to specify if training or inferring
+- [x] inference ability to show pretrained model worked (plot 4 test numbers and show the true and predicted labels)
+- [x] args/ability to use custom model config file for training
+- [x] args/ability to use a user's trained model for training (reads model filename from user config file)
+- [x] ability to load pretrained model
 - [ ] setup pygame visuals backend
 - [ ] visualize optimizer (what the lr is set to currently)
 - [ ] Gradient Flow Visualization

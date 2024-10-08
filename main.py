@@ -16,8 +16,11 @@ def main():
     # MNIST classifier options
     script_group.add_argument('-md', '--mnist_digits', action='store_true', help='Run MNIST classifier')
     parser.add_argument('-m', '--mode', choices=['train', 'infer'], default='train', help="Choose whether to train a CNN model (default) or infer on a pretrained one")
-
+    parser.add_argument('-uc', '--user_config', action='store_true', help="Use user-defined CNN configuration file (config/user_cnn_params.json) for training CNN on MNIST")
+    parser.add_argument('-uc', '--user_model', action='store_true', help="File path to user's previously trained model object. (Default in the 'models/' folder) Note: Must have been trained with this specific classifier, as it relies on CNN object properties defined in the config file used for inference.")
     args = parser.parse_args()
+
+    # XOR Neural Network argument parsing
     if args.xor:
         kwargs = {}
         if args.hidden_neurons:
@@ -26,11 +29,21 @@ def main():
             kwargs['ner'] = args.num_epochs_refresh_visualizer
         xor.run_xor(**kwargs)
 
+    # CNN MNIST argument parsing
     elif args.mnist_digits:
-        if args.mode == 'train':
-            mnist_digits.run_mnist_train()
-        elif args.mode == 'infer':
-            mnist_digits.run_mnist_inference("models/mnist_cnn.pkl")
+        if args.mode == 'train': # run mnist training visuals
+            if args.user_config: # if user opted to use custome cnn parameters
+                config_fp = "config/user_cnn_params.json"
+            else: # use default config parameters
+                config_fp = "config/default_cnn_params.json"
+            mnist_digits.run_mnist_train(config_fp)
+        
+        elif args.mode == 'infer': # run mnist inference visuals
+            if args.user_model: # if user opted to use their model trained with this project
+                model_fp = args.user_model
+            else: # use existing default pretrained model trained with default configs
+                model_fp = "models/default_mnist_cnn.pkl"
+            mnist_digits.run_mnist_inference(model_fp)
 
 
 if __name__ == '__main__':

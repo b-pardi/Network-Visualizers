@@ -784,9 +784,12 @@ def gather_mnist_data(cnn_params):
 
     return x_train, y_train, x_val, y_val, x_test, y_test
 
-def run_mnist_train():
+def run_mnist_train(config_fp):
+    if not os.path.isfile(config_fp):
+        raise FileNotFoundError(f"ERROR: found no model object file at {config_fp}")
+
     # load the parameters for the CNN
-    with open("config/cnn_params.json", 'r') as config_file:
+    with open(config_fp, 'r') as config_file:
         cnn_params = json.load(config_file)
 
     # download/grab and preprocess images
@@ -816,11 +819,11 @@ def run_mnist_train():
     
     cnn.save_model(f"models/{cnn_params['model_output_filename']}.pkl")
 
-def run_mnist_inference(fp):
-    if not os.path.isfile(fp):
-        raise FileNotFoundError(f"ERROR: found no model object file at {fp}")
+def run_mnist_inference(model_fp):
+    if not os.path.isfile(model_fp):
+        raise FileNotFoundError(f"ERROR: found no model object file at {model_fp}")
     
-    with open(fp, 'rb') as obj_file:
+    with open(model_fp, 'rb') as obj_file:
         cnn = pkl.load(obj_file)
 
     # NEED TO RETRAIN NOW THAT PARAMS ARE SAVED AS ATTR OF CNN OBJECT
