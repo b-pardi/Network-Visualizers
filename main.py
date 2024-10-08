@@ -7,13 +7,15 @@ def main():
     parser = argparse.ArgumentParser(description="Choose network to visualize")
     script_group = parser.add_mutually_exclusive_group(required=True)
 
+    # XOR classifier options
     script_group.add_argument('--xor', action='store_true', help='Run the XOR classifier')
     parser.add_argument('-e', '--epochs', type=int, help='Number of epochs to train (default 30,000)')
     parser.add_argument('-hn', '--hidden_neurons', type=int, help='Number of neurons in hidden layer (default 3)')
     parser.add_argument('-ner', '--num_epochs_refresh_visualizer', type=int, help='Number of epochs per refreshing of visualizers (effects speed of training, default 100)')
 
+    # MNIST classifier options
     script_group.add_argument('-md', '--mnist_digits', action='store_true', help='Run MNIST classifier')
-    
+    parser.add_argument('-m', '--mode', choices=['train', 'infer'], default='train', help="Choose whether to train a CNN model (default) or infer on a pretrained one")
 
     args = parser.parse_args()
     if args.xor:
@@ -25,7 +27,10 @@ def main():
         xor.run_xor(**kwargs)
 
     elif args.mnist_digits:
-        mnist_digits.run_mnist()
+        if args.mode == 'train':
+            mnist_digits.run_mnist_train()
+        elif args.mode == 'infer':
+            mnist_digits.run_mnist_inference("models/mnist_cnn.pkl")
 
 
 if __name__ == '__main__':

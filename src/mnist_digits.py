@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 import pickle as pkl
 import json
+import os
 
 from utils.data import download_mnist, load_mnist, onehot_encode, stratified_split, select_fraction_of_data, downsample_square_images
 from utils.normalize import constant_norm
@@ -434,6 +435,7 @@ class CNN:
     network is assembled based on the "config/cnn_params.json" file
     """
     def __init__(self, params):
+        self.params = params
         num_classes = params["num_classes"]
         input_size = params["input_size"]
         in_channels = params["in_channels"]
@@ -678,6 +680,15 @@ class CNN:
                     })
                     val_bar.update(1)
 
+            # get most recent stats so when model finishes training, these will be saved in the pkl object
+            self.final_train_acc = total_train_acc / batches_processed
+            self.final_train_prec = total_train_prec / batches_processed
+            self.final_train_f1 = total_train_f1 / batches_processed
+        
+            self.final_val_acc = val_acc / val_batches_processed
+            self.final_val_prec = val_prec / val_batches_processed
+            self.final_val_f1 = val_f1 / val_batches_processed
+
             # early stopping check
             avg_val_loss = val_loss / validation_subset_size
             if avg_val_loss < best_val_loss:
@@ -695,8 +706,16 @@ class CNN:
         Run a forward pass through the network to make a prediction
         """
 
-        logits = self.forward(x)
-        return np.argmax(logits, axis=1)
+        probs = self.forward(x)
+        return np.argmax(probs, axis=1)
+    
+    def predict_prob(self, x):
+        """
+        Run a forward pass through the network to make a prediction
+        return the probability of its predicition instead
+        """
+
+        return self.forward(x)
     
     def save_model(self, fn):
         with open(fn, 'wb') as out_file:
@@ -718,17 +737,13 @@ def plot_mnist_digit(train_img, train_label, test_img, test_label):
 
     plt.show()
 
-def run_mnist():
+def gather_mnist_data(cnn_params):
     mnist_md5_dict = {
         'train_images': 'f68b3c2dcbeaaa9fbdd348bbdeb94873',
         'train_labels': 'd53e105ee54ea40749a09fcbcd1e9432',
         'test_images': '9fb629c4189551a2d022fa330f9573f3',
         'test_labels': 'ec29112dd5afa0611ce80d1b7f02629c'
     }
-
-    # load the parameters for the CNN
-    with open("config/cnn_params.json", 'r') as config_file:
-        cnn_params = json.load(config_file)
 
     data_dir_dict = download_mnist("res/mnist_data/")
     x_train, y_train, x_test, y_test = load_mnist(data_dir_dict, mnist_md5_dict)
@@ -767,6 +782,16 @@ def run_mnist():
 
     print(f"Post-Processed Dataset Shapes: x_train: {x_train.shape}, y_train: {y_train.shape}, x_val: {x_val.shape}, y_val: {y_val.shape}, x_test: {x_test.shape}, y_test: {y_test.shape}")
 
+    return x_train, y_train, x_val, y_val, x_test, y_test
+
+def run_mnist_train():
+    # load the parameters for the CNN
+    with open("config/cnn_params.json", 'r') as config_file:
+        cnn_params = json.load(config_file)
+
+    # download/grab and preprocess images
+    x_train, y_train, x_val, y_val, _, _ = gather_mnist_data(cnn_params)
+
     # optimizer object
     optim = AdamOptimizer(
         lr=0.01,        # initial learning rate
@@ -790,3 +815,38 @@ def run_mnist():
     )
     
     cnn.save_model(f"models/{cnn_params['model_output_filename']}.pkl")
+
+def run_mnist_inference(fp):
+    if not os.path.isfile(fp):
+        raise FileNotFoundError(f"ERROR: found no model object file at {fp}")
+    
+    with open(fp, 'rb') as obj_file:
+        cnn = pkl.load(obj_file)
+
+    # NEED TO RETRAIN NOW THAT PARAMS ARE SAVED AS ATTR OF CNN OBJECT
+    # AND USE PARAMS FOR SIZING IMAGES FOR INFERENCE
+
+    with open("config/cnn_params.json", 'r') as config_file:
+        cnn_params = json.load(config_file)
+
+    _, _, _, _, x_test, y_test = gather_mnist_data(cnn_params)
+
+    indices = np.random.choice(len(x_test), 4, replace=False)  # Randomly select 4 indices
+    x_random_4 = x_test[indices]  # Select the images based on the random indices
+    y_true_random_4 = y_test[indices]  # Select the corresponding true labels (one-hot encoded)
+
+    y_pred_random_4 = cnn.predict(x_random_4)
+
+    # convert the one-hot encoded true labels to class indices
+    y_true_random_4_indices = np.argmax(y_true_random_4, axis=1)
+
+    # plot the 4 images with titles as predicted and true labels
+    fig, axs = plt.subplots(1, 4, figsize=(12, 3))  # Create 4 subplots
+
+    for i, ax in enumerate(axs):
+        ax.imshow(x_random_4[i].squeeze(), cmap='gray')
+        ax.set_title(f"Pred: {y_pred_random_4[i]}, True: {y_true_random_4_indices[i]}")
+        ax.axis('off')  # Hide axes
+
+    plt.tight_layout()
+    plt.show()
