@@ -15,7 +15,6 @@ Currently only the simple Neural Network to solve the XOR problem is implemented
   - [XOR (Exclusive OR) Problem Neural Net](docs/xor.md)
   - [Convolutional Neural Network - MNIST Handwritten Digits](docs/mnist_cnn.md)
 - [Planned Implementations](#planned-implementations)
-- [Contributing](#contributing)
 
 ---
 

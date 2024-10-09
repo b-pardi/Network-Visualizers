@@ -4,8 +4,6 @@
 
 ## Table of Contents
 
-## Table of Contents
-
 - [Preamble](#preamble)
 - [Problem Definition](#problem-definition)
 - [Problem Solution](#problem-solution)
@@ -43,7 +41,7 @@ An XOR logic gate takes two binary inputs and outputs a single binary output as 
 
 Plotting the inputs and outputs of this truth table results in something like this:
 
-![XOR is not linearly separable](imgs/xor_problem/xor_1.png)
+![XOR is not linearly separable](figures/xor_problem/xor_1.png)
 
 You can see in the above plot, that there is no way to draw a single line to separate the two categories.
 
@@ -51,17 +49,17 @@ You can see in the above plot, that there is no way to draw a single line to sep
 ## Problem Solution
 
 However if we draw two lines we can separate categories effectively
-![XOR outputs can be separated with 2 lines](imgs/xor_problem/xor_2.png)
+![XOR outputs can be separated with 2 lines](figures/xor_problem/xor_2.png)
 
 *Conceptually speaking* the equivalent to drawing two lines is to use two hidden neurons to introduce non linear relationships.
 
 However, we are not technically drawing 2 separate lines, rather having the network transform points to a new 2D space (feature space) where the points *become* linearly separable, and then interpreting this linear separation as it relates to our input space to make a decision (and to visualize the decision boundaries). This mapping is created from the non-linearities of the activation functions. When we interpret the linear decision boundary that was found in this new 2D space as it relates to our original input space, the boundary is now curved and *resembles* a 2nd degree polynomial, however it is technically a linear piecewise function found in the feature space, where each neuron contributes a piece of the piecewise function. This curved decision boundary is better demonstrated in the intermediate training steps as it starts to figure out the solution, where we can see an accurate boundary *starting* to form.
 
-![Solution is not technically 2 lines, rather one 2nd degree polynomial line](imgs/xor_problem/xor_3.png)
+![Solution is not technically 2 lines, rather one 2nd degree polynomial line](figures/xor_problem/xor_3.png)
 
 In the figure below we can see the plot showing the network has found a solution and is interpreted in our input space, and how it relates to the feature space where we found a linearly separable solution. 
 
-![Input space vs 2D feature space](imgs/xor_problem/xor_4.png)
+![Input space vs 2D feature space](figures/xor_problem/xor_4.png)
 
 **Note** 2 of the True outputs (pink) have been transformed such that they essentially overlap eachother.
 
@@ -71,7 +69,7 @@ If we used 3 hidden neurons, we'd be transforming the points into 3D and find a 
 
 We can see how 3 hidden neurons gives a 3D feature space below
 
-![Input space vs 3D feature space](imgs/xor_problem/xor_5.png)
+![Input space vs 3D feature space](figures/xor_problem/xor_5.png)
 
 
 **New Feature**: Loss Surface and Weight Trajectory Visualization
@@ -80,7 +78,7 @@ We can see how 3 hidden neurons gives a 3D feature space below
 To gain deeper insights into how our neural network learns to solve the XOR problem, I've added a new visualization feature that plots the loss surface and the trajectory of specific weights during training.
 
 
-![Input space vs 3D feature space](imgs/xor_problem/xor_6.png)
+![Input space vs 3D feature space](figures/xor_problem/xor_6.png)
 
 
 
@@ -95,7 +93,7 @@ Note: The visualization enhances the existing feature space plots by showing not
 We take the norms of the gradients of each layer's weights (except input layer since there are no weights in the input layer). This over time shows how much the weights are changing each epoch, and over time as the network learns and finds a solution, we can see the curve taper off, indicating that the weights are changing less as we approach a minimum. 
 
 
-![Input space vs 3D feature space](imgs/xor_problem/xor_7.png)
+![Input space vs 3D feature space](figures/xor_problem/xor_7.png)
 
 
 
