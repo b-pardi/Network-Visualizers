@@ -17,7 +17,7 @@ def main():
     script_group.add_argument('-md', '--mnist_digits', action='store_true', help='Run MNIST classifier')
     parser.add_argument('-m', '--mode', choices=['train', 'infer'], default='train', help="Choose whether to train a CNN model (default) or infer on a pretrained one")
     parser.add_argument('-uc', '--user_config', action='store_true', help="Use user-defined CNN configuration file (config/user_cnn_params.json) for training CNN on MNIST")
-    parser.add_argument('-uc', '--user_model', action='store_true', help="File path to user's previously trained model object. (Default in the 'models/' folder) Note: Must have been trained with this specific classifier, as it relies on CNN object properties defined in the config file used for inference.")
+    parser.add_argument('-um', '--user_model', type=str, help="File path to user's previously trained model object. (Default in the 'models/' folder) Note: Must have been trained with this specific classifier, as it relies on CNN object properties defined in the config file used for inference.")
     args = parser.parse_args()
 
     # XOR Neural Network argument parsing

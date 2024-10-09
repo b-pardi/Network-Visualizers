@@ -829,7 +829,7 @@ def run_mnist_inference(model_fp):
     # NEED TO RETRAIN NOW THAT PARAMS ARE SAVED AS ATTR OF CNN OBJECT
     # AND USE PARAMS FOR SIZING IMAGES FOR INFERENCE
 
-    with open("config/cnn_params.json", 'r') as config_file:
+    with open("config/default_cnn_params.json", 'r') as config_file:
         cnn_params = json.load(config_file)
 
     _, _, _, _, x_test, y_test = gather_mnist_data(cnn_params)
