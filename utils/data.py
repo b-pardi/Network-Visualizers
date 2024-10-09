@@ -73,6 +73,8 @@ def stratified_split(x_train, y_train, val_size=0.1, num_classes=10, random_stat
     x_val_strat = x_val_strat[val_shuffle_indices]
     y_val_strat = y_val_strat[val_shuffle_indices]
 
+    np.random.seed(None)  # Unsets the seed
+
     return x_train_strat, y_train_strat, x_val_strat, y_val_strat
 
 def select_fraction_of_data(x_data, y_data, num_classes, fraction=1.0):
