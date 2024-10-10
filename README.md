@@ -24,6 +24,8 @@ I wanted to make this project to open the 'black box' we call Machine Learning. 
 
 # Setup and Installation
 
+**Note** Setup and runtime verification can only be confirmed on Python 3.10.x. Probably works on other version with maybe minor changes, but it cannot be confirmed.
+
 1. Clone the repository:
     - `git clone https://github.com/b-pardi/Network-Visualizers.git`
     - `cd Network-Visualizers`
