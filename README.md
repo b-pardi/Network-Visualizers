@@ -25,7 +25,7 @@ I wanted to make this project to open the 'black box' we call Machine Learning. 
 # Setup and Installation
 
 1. Clone the repository:
-    - `git clone https://github.com/yourusername/Network-Visualizers.git`
+    - `git clone https://github.com/b-pardi/Network-Visualizers.git`
     - `cd Network-Visualizers`
 
 2. Install the required dependencies (virtual environment recommended):
