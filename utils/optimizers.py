@@ -1,6 +1,6 @@
 import numpy as np
 
-from utils.interfaces import LearnableLayer
+from layers.static.interfaces import LearnableLayer
 
 class AdamOptimizer:
     """

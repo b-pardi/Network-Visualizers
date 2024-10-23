@@ -8,7 +8,7 @@ import matplotlib.colors as mcolors
 import os
 
 from utils.errs import mse
-from utils.activations import sigmoid, d_sigmoid
+from layers.static.activations import sigmoid, d_sigmoid
 from utils.log_reg import LogisticRegression
 
 # utilize more threads for efficiency

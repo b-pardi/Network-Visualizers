@@ -149,7 +149,7 @@ def compute_md5_checksum(fp):
         return full_hash
 
 def download_mnist(fp):
-    base_url = ' https://storage.googleapis.com/cvdf-datasets/mnist/'
+    base_url = 'https://storage.googleapis.com/cvdf-datasets/mnist/'
     files = {
         'train_images': 'train-images-idx3-ubyte.gz',
         'train_labels': 'train-labels-idx1-ubyte.gz',

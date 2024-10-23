@@ -1,5 +1,5 @@
 import numpy as np
-from utils.activations import sigmoid
+from layers.static.activations import sigmoid
 
 class LogisticRegression:
     def __init__(self, lr=0.01, iters=8000):

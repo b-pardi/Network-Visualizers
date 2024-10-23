@@ -1,6 +1,6 @@
 import numpy as np
 import pytest
-from utils.activations import ReLULayer, SoftmaxLayer, TanhLayer, sigmoid, d_sigmoid
+from layers.static.activations import ReLULayer, SoftmaxLayer, TanhLayer, sigmoid, d_sigmoid
 
 # Define a pytest fixture to set up the ReLU layer
 @pytest.fixture

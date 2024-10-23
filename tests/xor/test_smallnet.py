@@ -40,7 +40,7 @@ def test_backward(small_net, xor_data):
 
     # Perform one forward and backward pass
     small_net.forward(X)
-    small_net.backward(X, y, lr=0.1)
+    small_net.backward(X, y, lr=0.1, epoch=1)
 
     # Check if weights and biases have been updated
     assert not np.array_equal(initial_w1, small_net.w1), "Weights w1 did not update"
